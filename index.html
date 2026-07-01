@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AP 课程选课推荐系统 IHP 2026-27</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:#1a1a2e}
+.container{max-width:1200px;margin:0 auto;padding:24px 20px}
+header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);color:#fff;padding:36px 20px;border-radius:12px;margin-bottom:24px;text-align:center}
+header h1{font-size:24px;margin-bottom:6px}
+header p{color:#a8b2d1;font-size:14px}
+.card{background:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h3{font-size:13px;font-weight:700;color:#4a5568;margin-bottom:12px;border-bottom:1px solid #edf2f7;padding-bottom:8px}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.grp{display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px}
+.grp label{font-size:10px;font-weight:600;color:#4a5568;text-transform:uppercase;letter-spacing:.3px}
+.grp select,.grp input{padding:7px 10px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px}
+.grp select:focus,.grp input:focus{outline:none;border-color:#0f3460}
+.grp input[type="range"]{padding:0;border:none;height:5px;-webkit-appearance:none;background:#e2e8f0;border-radius:3px}
+.grp input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#0f3460;cursor:pointer}
+.rval{font-size:22px;font-weight:700;color:#0f3460;text-align:center;line-height:1}
+.rlbl{display:flex;justify-content:space-between;font-size:10px;color:#a0aec0}
+.pgrid{display:flex;flex-wrap:wrap;gap:8px}
+.pitem{display:flex;align-items:center;gap:5px;padding:5px 10px;border:2px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:12px;user-select:none}
+.pitem:hover{border-color:#bee3f8}
+.pitem input[type="checkbox"]{width:14px;height:14px;pointer-events:none}
+.pitem.chk{border-color:#0f3460;background:#ebf4ff;font-weight:600}
+.btn{padding:8px 28px;background:#0f3460;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+.btn:hover{background:#1a1a2e}
+.sbar{background:#fff;border-radius:12px;padding:12px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:13px}
+.sbar .cnt span{color:#0f3460;font-weight:700}
+.leg{display:flex;gap:12px;flex-wrap:wrap}
+.legi{display:flex;align-items:center;gap:4px;font-size:11px;color:#4a5568}
+.ld{width:9px;height:9px;border-radius:50%}
+.ld.g{background:#48bb78}.ld.y{background:#ecc94b}.ld.r{background:#fc8181}
+table{width:100%;border-collapse:collapse;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08);background:#fff}
+thead{background:#1a1a2e;color:#fff}
+th{padding:10px 8px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.3px;font-weight:600}
+td{padding:10px 8px;font-size:12px;border-bottom:1px solid #edf2f7}
+tbody tr:hover{background:#f7fafc}
+.gh{background:#edf2f7!important;font-weight:700}
+.gh td{padding:8px;font-size:13px;border-bottom:2px solid #e2e8f0}
+.bdg{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-right:6px}
+.bdg.sc{background:#bee3f8;color:#2a4365}
+.bdg.ad{background:#fefcbf;color:#744210}
+.bdg.ar{background:#fbb6ce;color:#702459}
+.bdg.ss{background:#e9d8fd;color:#44337a}
+.sb{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600}
+.sb.g{background:#c6f6d5;color:#22543d}.sb.y{background:#fefcbf;color:#744210}.sb.r{background:#fed7d7;color:#9b2c2c}
+.tg{display:inline-block;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:500}
+.tg.g{background:#c6f6d5;color:#22543d}.tg.r{background:#fed7d7;color:#9b2c2c}
+.ch{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.ch.g{background:#c6f6d5;color:#22543d}.ch.y{background:#fefcbf;color:#744210}.ch.r{background:#fed7d7;color:#9b2c2c}
+.cbox{text-align:center}
+.cbox input{width:14px;height:14px;cursor:pointer}
+.cbox input:disabled{cursor:not-allowed;opacity:.25}
+.ctags{display:flex;flex-wrap:wrap;gap:2px}
+.ctag{font-size:9px;padding:1px 5px;border-radius:3px;background:#edf2f7;color:#4a5568}
+.ctag.ok{background:#c6f6d5;color:#22543d;font-weight:600}
+@media(max-width:768px){.container{padding:12px}.card{padding:14px}.row{gap:10px}.grp{min-width:110px}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>AP 选课推荐系统 — IHP 2026-27</h1>
+<p>根据 IHP 2026-27 官方选课标准智能评估你的 AP 选课资格</p>
+</header>
+
+<div class="card">
+<h3>基本信息</h3>
+<div class="row">
+<div class="grp"><label>综合 GPA</label><div class="rval" id="gpaD">90</div><input type="range" id="gpa" min="0" max="100" value="90" oninput="gpaD.textContent=this.value"><div class="rlbl"><span>0</span><span>50</span><span>100</span></div></div>
+<div class="grp"><label>年级</label><select id="grade"><option value="G10">G10</option><option value="G11">G11</option><option value="G12" selected>G12</option></select></div>
+<div class="grp"><label>语言考试</label><select id="langType" onchange="swLang()"><option value="ielts">IELTS (0-9)</option><option value="toefl">TOEFL (0-6)</option></select></div>
+<div class="grp"><label id="langLbl">语言成绩 (IELTS)</label><div class="rval" id="langD">6.0</div><input type="range" id="lang" min="0" max="9" step="0.5" value="6" oninput="udLang()"><div class="rlbl" id="langR"><span>0</span><span>4.5</span><span>9</span></div></div>
+<div class="grp"><label>方向偏好</label><select id="dir"><option value="science">偏理科</option><option value="arts">偏文科</option></select></div>
+<div class="grp"><label>职业方向</label><select id="car"><option>工程与计算机</option><option>医学与生命科学</option><option>数据科学与金融</option><option>科研与学术</option><option>商业与管理</option><option>法律与公共政策</option><option>心理与教育</option><option>人文与传媒</option></select></div>
+</div>
+</div>
+
+<div class="card">
+<h3>前置课程成绩（未修则不勾选）</h3>
+<div class="row">
+<div class="pgrid">
+<div class="pitem" data-target="alg" onclick="togglePre(this,event)"><input type="checkbox" class="pcb" value="alg"> Algebra 2</div>
+<div class="pitem" data-target="ipc" onclick="togglePre(this,event)"><input type="checkbox" class="pcb" value="ipc"> IPC</div>
+<div class="pitem" data-target="apScore" onclick="togglePre(this,event)"><input type="checkbox" class="pcb" value="ap1"> AP Physics 1 (AP考)</div>
+<div class="pitem" data-target="his" onclick="togglePre(this,event)"><input type="checkbox" class="pcb" value="his"> History</div>
+</div>
+</div>
+<div class="row" style="margin-top:10px">
+<div class="grp" style="flex:1;min-width:140px"><label>Algebra 2 成绩</label><div class="rval" id="algD">85</div><input type="range" id="alg" min="0" max="100" value="85" oninput="algD.textContent=this.value"><div class="rlbl"><span>0</span><span>50</span><span>100</span></div></div>
+<div class="grp" style="flex:1;min-width:140px"><label>IPC 成绩</label><div class="rval" id="ipcD">80</div><input type="range" id="ipc" min="0" max="100" value="80" oninput="ipcD.textContent=this.value"><div class="rlbl"><span>0</span><span>50</span><span>100</span></div></div>
+<div class="grp" style="flex:1;min-width:140px"><label>History 成绩</label><div class="rval" id="hisD">85</div><input type="range" id="his" min="0" max="100" value="85" oninput="hisD.textContent=this.value"><div class="rlbl"><span>0</span><span>50</span><span>100</span></div></div>
+<div class="grp" style="flex:1;min-width:100px"><label>AP Physics 1 考分</label><select id="apScore"><option value="1">1</option><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option></select></div>
+</div>
+</div>
+
+<div class="card"><h3>仅 AP Biology：入学内测成绩</h3><div class="row"><div class="grp" style="flex:1;min-width:200px"><label>Biology 内测成绩</label><div class="rval" id="bioD">85</div><input type="range" id="bio" min="0" max="100" value="85" oninput="bioD.textContent=this.value"><div class="rlbl"><span>0</span><span>50</span><span>100</span></div></div></div></div>
+
+<div class="row" style="margin-bottom:20px"><button class="btn" onclick="go()">评估并开始选课</button></div>
+
+<div class="sbar" id="sbar">
+<div class="cnt">课程 <span id="tc">0</span> | 任选上限 <span id="mx">0</span> 门 | 已选 <span id="sc">0</span> 门 <span id="ch"></span></div>
+<div class="leg"><div class="legi"><span class="ld g"></span> 完全匹配</div><div class="legi"><span class="ld y"></span> 部分匹配</div><div class="legi"><span class="ld r"></span> 不匹配</div></div>
+</div>
+
+<table><thead><tr>
+<th style="width:30px">选</th><th>状态</th><th>AP 课程</th><th>类别</th><th>年级</th><th>语言要求</th><th>前置达标</th><th>职业</th>
+</tr></thead><tbody id="tb"></tbody></table>
+</div>
+
+<script>
+// la: TOEFL 0-6 (3=IELTS5, 4=IELTS5.5, 5=IELTS6, 6=IELTS6.5)
+var C=[
+// 理科 · 初级
+{id:1,n:'AP Pre-Calculus',c:'理科',l:'初级',la:3,i:'Medium',cr:['工程与计算机','数据科学与金融'],pr:{t:'alg',s:85},grade:['G10','G11']},
+{id:2,n:'AP Physics 1',c:'理科',l:'初级',la:3,i:'High',cr:['工程与计算机','医学与生命科学'],pr:{t:'ipc',s:85},grade:['G10','G11']},
+{id:3,n:'AP Chemistry',c:'理科',l:'初级',la:4,i:'Medium',cr:['医学与生命科学','科研与学术'],pr:{t:'ipc',s:80},grade:['G10','G11','G12']},
+// 理科 · 高级
+{id:4,n:'AP Calculus BC',c:'理科',l:'高级',la:3,i:'High',cr:['工程与计算机','数据科学与金融','科研与学术'],pr:{t:'alg',s:90},grade:['G11','G12']},
+{id:5,n:'AP Statistics',c:'理科',l:'高级',la:4,i:'High',cr:['数据科学与金融','商业与管理'],pr:{t:'alg',s:90},grade:['G12']},
+{id:6,n:'AP Physics 2',c:'理科',l:'高级',la:3,i:'High',cr:['工程与计算机','科研与学术'],pr:{t:'ap1',s:3},grade:['G11','G12']},
+{id:7,n:'AP Physics C: Mechanics',c:'理科',l:'高级',la:3,i:'High',cr:['工程与计算机','科研与学术'],pr:{t:'both',algS:90,ap1S:3},grade:['G11','G12']},
+{id:8,n:'AP Physics C: E&M',c:'理科',l:'高级',la:3,i:'Very High',cr:['工程与计算机','科研与学术'],pr:{t:'both',algS:90,ap1S:3},grade:['G11','G12']},
+{id:9,n:'AP Biology',c:'理科',l:'高级',la:5,i:'Medium',cr:['医学与生命科学','科研与学术'],pr:null,entry:85,grade:['G11','G12']},
+// 文科
+{id:10,n:'AP Psychology',c:'文科',l:'',la:5,i:'Low',cr:['心理与教育','医学与生命科学'],pr:null,grade:['G11','G12']},
+// 社会科学 (Social Science)
+{id:11,n:'AP Microeconomics',c:'社科',l:'',la:4,i:'Medium',cr:['商业与管理','数据科学与金融'],pr:{t:'alg',s:85},grade:['G11','G12']},
+{id:12,n:'AP Macroeconomics',c:'社科',l:'',la:4,i:'Medium',cr:['商业与管理','数据科学与金融'],pr:null,grade:['G11','G12']},
+{id:13,n:'AP Business',c:'社科',l:'',la:4,i:'Medium',cr:['商业与管理','数据科学与金融'],pr:null,grade:['G11','G12']},
+{id:14,n:'AP World History',c:'社科',l:'',la:6,i:'Medium',cr:['法律与公共政策','人文与传媒'],pr:{t:'his',s:85},grade:['G11','G12']}
+];
+
+
+function togglePre(el,ev){
+  if(ev.target.type==='checkbox')return;
+  var cb=el.querySelector('.pcb');cb.checked=!cb.checked;
+  el.classList.toggle("chk",cb.checked);var t=document.getElementById(el.dataset.target);if(t)t.disabled=!cb.checked;
+}
+function hasPre(v){var e=document.querySelector('.pcb[value="'+v+'"]');return e&&e.checked}
+
+function swLang(){
+  var t=document.getElementById('langType').value,s=document.getElementById('lang'),v=document.getElementById('langD'),l=document.getElementById('langR'),lb=document.getElementById('langLbl');
+  if(t==='ielts'){
+    s.min=0;s.max=9;s.step=0.5;s.value=6;v.textContent='6.0';
+    l.innerHTML='<span>0</span><span>4.5</span><span>9</span>';lb.textContent='语言成绩 (IELTS 0-9)';
+  }else{
+    s.min=0;s.max=6;s.step=0.5;s.value=4;v.textContent='4';
+    l.innerHTML='<span>0</span><span>3</span><span>6</span>';lb.textContent='语言成绩 (TOEFL 0-6)';
+  }
+}
+function udLang(){document.getElementById('langD').textContent=document.getElementById('lang').value}
+function getLang(){
+  var r=parseFloat(document.getElementById('lang').value),t=document.getElementById('langType').value;
+  if(t==='toefl')return r;
+  var m={};for(var i=0;i<=9;i+=0.5)m[i]=0;
+  m[0]=0;m[0.5]=0;m[1]=0;m[1.5]=1;m[2]=1;m[2.5]=1;m[3]=2;m[3.5]=2;m[4]=2;
+  m[4.5]=3;m[5]=3;m[5.5]=4;m[6]=5;m[6.5]=6;m[7]=6;m[7.5]=6;m[8]=6;m[8.5]=6;m[9]=6;
+  return m[r]||Math.round(r/1.5);
+}
+
+function lim(g){if(g>=92)return 3;if(g>=88)return 2;if(g>=85)return 1;return 1}
+
+function go(){
+var st={
+g:parseInt(document.getElementById('gpa').value),gr:document.getElementById('grade').value,
+la:getLang(),d:document.getElementById('dir').value,
+c:document.getElementById('car').value,
+alg:parseInt(document.getElementById('alg').value),ipc:parseInt(document.getElementById('ipc').value),
+his:parseInt(document.getElementById('his').value),
+ap:parseInt(document.getElementById('apScore').value),bio:parseInt(document.getElementById('bio').value)
+};
+var mx=lim(st.g);document.getElementById('mx').textContent=mx;
+document.getElementById('ch').innerHTML=' <span class="ch '+(st.g>=92?'g':st.g>=88?'y':'r')+'">GPA'+st.g+',可选'+mx+'门</span>';
+document.querySelectorAll('.ck').forEach(function(c){c.checked=false});
+document.getElementById('sc').textContent='0';
+
+var f=C.filter(function(x){
+  if(st.d==="science")return x.c==="理科"||x.c==="社科";
+  if(st.d==="arts")return x.c==="文科"||x.c==="社科";
+  return true;
+});
+f=f.filter(function(x){return x.grade.indexOf(st.gr)!==-1});
+
+var m=0,p=0,n=0,tb=document.getElementById('tb');tb.innerHTML='';
+var grps=[];
+var p1=f.filter(function(x){return x.c==='理科'&&x.l==='初级'});
+var p2=f.filter(function(x){return x.c==='理科'&&x.l==='高级'});
+var p3=f.filter(function(x){return x.c==='文科'});
+var p4=f.filter(function(x){return x.c==='社科'});
+if(p1.length)grps.push({l:'理科 . 初级',s:'sc',cs:p1});
+if(p2.length)grps.push({l:'理科 . 高级',s:'ad',cs:p2});
+if(p3.length)grps.push({l:'文科',s:'ar',cs:p3});
+if(p4.length)grps.push({l:'社会科学',s:'ss',cs:p4});
+document.getElementById('tc').textContent=f.length;
+
+grps.forEach(function(g){
+var hd=document.createElement('tr');hd.className='gh';
+hd.innerHTML='<td colspan="8"><span class="bdg '+g.s+'">'+g.l+'</span>('+g.cs.length+'门)</td>';
+tb.appendChild(hd);
+g.cs.forEach(function(x){
+var lOk=st.la>=x.la;
+var lDisp=document.getElementById('langType').value==='ielts'?'IELTS'+x.la+'级':'TOEFL'+x.la+'级';
+
+var preOk=true,preN='-';
+if(x.pr){
+  if(x.pr.t==='alg'){
+    preOk=hasPre('alg')&&st.alg>=x.pr.s;
+    preN=preOk?'通过':(hasPre('alg')?'GPA不足('+st.alg+'<'+x.pr.s+')':'未修Algebra 2');
+  }else if(x.pr.t==='ipc'){
+    preOk=hasPre('ipc')&&st.ipc>=x.pr.s;
+    preN=preOk?'通过':(hasPre('ipc')?'GPA不足':'未修IPC');
+  }else if(x.pr.t==='his'){
+    preOk=hasPre('his')&&st.his>=x.pr.s;
+    preN=preOk?'通过':(hasPre('his')?'分数不足('+st.his+'<'+x.pr.s+')':'未修History');
+  }else if(x.pr.t==='ap1'){
+    preOk=hasPre('ap1')&&st.ap>=x.pr.s;
+    preN=preOk?'通过':(hasPre('ap1')?'AP分不足':'未考AP Physics 1');
+  }else if(x.pr.t==='both'){
+    preOk=hasPre('alg')&&st.alg>=x.pr.algS&&hasPre('ap1')&&st.ap>=x.pr.ap1S;
+    preN=preOk?'通过':'需Algebra2 90+ & AP Physics1 3+';
+  }
+}
+var bioOk=true;
+if(x.entry)bioOk=st.bio>=x.entry;
+
+var cOk=x.cr.indexOf(st.c)!==-1;
+var all=[lOk,preOk,cOk];
+if(x.entry)all.push(bioOk);
+var met=all.filter(Boolean).length,total=all.length;
+var ss,sl;
+if(met===total){ss='g';sl='完全匹配';m++}
+else if(met>=Math.ceil(total/2)){ss='y';sl='部分匹配';p++}
+else{ss='r';sl='不匹配';n++}
+
+var ct=x.cr.map(function(cr){return '<span class="ctag'+(cr===st.c?' ok':'')+'">'+cr+'</span>'}).join('');
+var pd=preOk?'<span class="tg g">'+preN+'</span>':'<span class="tg r">'+preN+'</span>';
+var cd=x.c+(x.l?' . '+x.l:'');
+var tr=document.createElement('tr');
+tr.innerHTML='<td class="cbox"><input type="checkbox" class="ck"'+(met===total?'':' disabled')+'></td>'
++'<td><span class="sb '+ss+'">'+sl+'</span></td>'
++'<td><strong>'+x.n+'</strong></td>'
++'<td><span style="font-size:11px;color:#718096">'+cd+'</span></td>'
++'<td>'+x.grade.join('/')+'</td>'
++'<td><span class="tg '+(lOk?'g':'r')+'">'+lDisp+'</span></td>'
++'<td>'+pd+'</td>'
++'<td><div class="ctags">'+ct+'</div></td>';
+tb.appendChild(tr);
+});
+});
+
+var sb=document.getElementById('sbar'),dt=sb.querySelector('.dt');
+if(!dt){dt=document.createElement('span');dt.className='dt';sb.querySelector('.cnt').after(dt)}
+dt.innerHTML='<span style="color:#22543d;font-weight:600">完全匹配 '+m+'</span><span style="margin:0 5px;color:#a0aec0">|</span><span style="color:#744210;font-weight:600">部分匹配 '+p+'</span><span style="margin:0 5px;color:#a0aec0">|</span><span style="color:#9b2c2c;font-weight:600">不匹配 '+n+'</span><span style="margin:0 5px;color:#a0aec0">|</span><span style="color:#0f3460;font-weight:600">已选 <span id="sc2">0</span></span>';
+}
+
+document.addEventListener('change',function(e){
+if(e.target.classList.contains('ck')){
+var mx=parseInt(document.getElementById('mx').textContent);
+var ck=document.querySelectorAll('.ck:checked');
+if(ck.length>mx){e.target.checked=false;alert('GPA '+document.getElementById('gpa').value+' 分, 最多只能选 '+mx+' 门课');}
+var sl=Math.min(ck.length,mx);document.getElementById('sc').textContent=sl;
+var e2=document.getElementById('sc2');if(e2)e2.textContent=sl;
+}
+});
+// 初始化: 所有前置输入默认禁用
+document.querySelectorAll(".pitem[data-target]").forEach(function(el){
+  var t=document.getElementById(el.dataset.target);
+  if(t)t.disabled=true;
+});
+go();
+</script>
+</body>
+</html>
