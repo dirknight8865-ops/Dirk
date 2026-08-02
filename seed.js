@@ -23,7 +23,7 @@ for (const name in raw) {
   }
 }
 
-const adminHash = bcrypt.hashSync("admin123", 10);
+const adminHash = bcrypt.hashSync("AbleTrack-2026!", 10);
 const stuHash = bcrypt.hashSync("pass123", 10);
 
 const db = {
