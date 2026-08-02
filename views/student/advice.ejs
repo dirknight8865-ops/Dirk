@@ -1,0 +1,18 @@
+<%- include('../partials/head', {title:'提升建议 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'advice'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">我的提升建议</h1>
+    <span style="background:var(--green,#22c55e);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
+  </div>
+  <% advice.forEach(a=>{ %>
+    <div class="card">
+      <h2><%= a.subject %> <% if(a.prediction){ %><span class="badge ps-<%= a.prediction %>">预测 <%= a.prediction %></span><% } %></h2>
+      <ul style="margin-left:18px;">
+        <% a.items.forEach(it=>{ %><li style="margin:4px 0;"><%= it %></li><% }) %>
+      </ul>
+    </div>
+  <% }) %>
+  <% if(advice.length===0){ %><div class="card"><p class="muted">暂无建议, 等待老师录入评分。</p></div><% } %>
+</div>
+</body></html>

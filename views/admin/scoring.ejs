@@ -1,0 +1,103 @@
+<%- include('../partials/head', {title:'评分录入 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'scoring'}) %>
+<div class="app">
+  <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">评分录入</h1>
+  <div id="msg"></div>
+  <div class="row">
+    <div class="col card">
+      <h2>选择学生与科目</h2>
+      <div class="form-row"><label>学年</label><select id="yearSel" style="max-width:260px;"></select></div>
+      <div class="form-row"><label>学生</label><select id="stuSel"><option value="">请选择</option></select></div>
+      <div class="form-row"><label>科目</label>
+        <div class="form-inline" style="display:flex;gap:6px;">
+          <select id="subjSel" style="flex:1;"><option value="">请选择</option><% courseNames.forEach(c=>{ %><option value="<%= c %>"><%= c %></option><% }) %><option value="__custom__">其他(手动输入)</option></select>
+          <input id="subjCustom" placeholder="科目名" style="flex:1;display:none;">
+        </div>
+      </div>
+      <div id="sliderBox"></div>
+      <div class="form-row" style="margin-top:10px;"><label>实际 AP 分(可选, 用于校准)</label><input id="actual" type="number" min="1" max="5" step="1" placeholder="留空则未知"></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-sm btn-block" onclick="save()">保存评分</button>
+        <button class="btn btn-sm btn-block btn-outline" onclick="resetSliders()">重置</button>
+      </div>
+    </div>
+    <div class="col card">
+      <h2>该学生已有评分</h2>
+      <table class="data"><thead><tr><th>科目</th><th>预测</th><th>实际</th><th>操作</th></tr></thead><tbody id="existBody"></tbody></table>
+    </div>
+  </div>
+</div>
+<script>
+const abilities = <%- JSON.stringify(abilities) %>;
+const courseNames = <%- JSON.stringify(courseNames) %>;
+const YEARS = <%- JSON.stringify(years) %>;
+const ACTIVE_YEAR = <%- JSON.stringify(activeYear) %>;
+let current = { scores: [3,3,3,3,3,3] };
+
+function buildYearSel(){
+  const sel=document.getElementById('yearSel');
+  sel.innerHTML='';
+  YEARS.forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y; sel.appendChild(o); });
+  sel.value=ACTIVE_YEAR;
+}
+function curYear(){ return document.getElementById('yearSel').value || ACTIVE_YEAR; }
+
+function buildSliders(){
+  const box=document.getElementById('sliderBox'); box.innerHTML='';
+  abilities.forEach((ab,i)=>{
+    const d=document.createElement('div'); d.className='ability-field'; d.style.marginBottom='8px';
+    d.innerHTML=`<label>${ab}</label><div class="slider-group"><input type="range" min="1" max="5" step="1" value="${current.scores[i]}" id="sl${i}" oninput="upd(${i})"><span class="slider-value" id="sv${i}">${current.scores[i]}</span></div>`;
+    box.appendChild(d);
+  });
+}
+function upd(i){ current.scores[i]=+document.getElementById('sl'+i).value; document.getElementById('sv'+i).textContent=current.scores[i]; }
+function resetSliders(){ current.scores=[3,3,3,3,3,3]; buildSliders(); }
+
+async function loadStudents(){
+  const r=await (await fetch('/admin/api/students')).json();
+  const sel=document.getElementById('stuSel');
+  sel.innerHTML='<option value="">请选择</option>';
+  r.data.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+}
+document.getElementById('stuSel').onchange=loadExisting;
+document.getElementById('yearSel').onchange=()=>{ current.scores=[3,3,3,3,3,3]; buildSliders(); loadExisting(); };
+async function loadExisting(){
+  const name=document.getElementById('stuSel').value; if(!name)return;
+  const r=await (await fetch('/admin/api/student/'+encodeURIComponent(name)+'?year='+encodeURIComponent(curYear()))).json();
+  const tb=document.getElementById('existBody'); tb.innerHTML='';
+  if(!r.ok){return;}
+  r.data.rows.forEach(row=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${row.subject}</td><td><span class="badge ps-${row.prediction}">${row.prediction}</span></td><td>${row.actual!=null?row.actual:'-'}</td><td><button class="btn btn-sm btn-outline" onclick="loadOne('${encodeURIComponent(row.subject)}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delSub('${encodeURIComponent(row.subject)}')">删</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+async function loadOne(subj){
+  subj=decodeURIComponent(subj);
+  const name=document.getElementById('stuSel').value;
+  const r=await (await fetch('/admin/api/student/'+encodeURIComponent(name)+'?year='+encodeURIComponent(curYear()))).json();
+  const row=r.data.rows.find(x=>x.subject===subj);
+  if(!row)return;
+  current.scores=row.scores.slice();
+  document.getElementById('subjSel').value=courseNames.includes(subj)?subj:'__custom__';
+  if(!courseNames.includes(subj)){document.getElementById('subjCustom').style.display='block';document.getElementById('subjCustom').value=subj;}
+  document.getElementById('actual').value=row.actual!=null?row.actual:'';
+  buildSliders();
+}
+async function save(){
+  const name=document.getElementById('stuSel').value;
+  let subj=document.getElementById('subjSel').value;
+  if(subj==='__custom__') subj=document.getElementById('subjCustom').value.trim();
+  if(!name||!subj) return alert('请先选择学生和科目');
+  const actual=document.getElementById('actual').value;
+  const r=await (await fetch('/admin/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,subject:subj,scores:current.scores,actual:actual?+actual:null,year:curYear()})})).json();
+  if(r.ok){document.getElementById('msg').innerHTML='<div class="alert alert-ok">已保存 · 已更新 '+curYear()+' 学年估算</div>';loadExisting();} else alert(r.error);
+}
+async function delSub(subj){
+  subj=decodeURIComponent(subj); const name=document.getElementById('stuSel').value;
+  if(confirm('删除 '+subj+' ('+curYear()+')?')) fetch('/admin/api/score/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,subject:subj,year:curYear()})}).then(loadExisting);
+}
+document.getElementById('subjSel').onchange=function(){document.getElementById('subjCustom').style.display=this.value==='__custom__'?'block':'none';};
+buildSliders(); buildYearSel(); loadStudents();
+</script>
+</body></html>

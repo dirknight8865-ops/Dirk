@@ -1,0 +1,1883 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "passwordHash": "$2a$10$EEA0WtezhDw1mWyv876fOO0MuT91xkCkoq3gqLBhDPVR7kZMHOTJq",
+      "role": "admin",
+      "studentName": null
+    },
+    {
+      "username": "stuWode",
+      "passwordHash": "$2a$10$2d5uHDa8XZphY3sdk3ytTuXdZjZDHN.L/9VhPE.3CACEfpPyqcVai",
+      "role": "student",
+      "studentName": "Wode Wang"
+    },
+    {
+      "username": "dirkwang",
+      "passwordHash": "$2a$10$FVRePpfeBh4q/ozeJ5nQZeTeypSPPnDiYF6JB37nuvJTZ2LFP4Tq2",
+      "role": "student",
+      "studentName": "Dirk Wang"
+    }
+  ],
+  "years": [
+    "2025-2026",
+    "2026-2027"
+  ],
+  "activeYear": "2025-2026",
+  "students": {
+    "Wode Wang": {
+      "AP Physics C: Mechanics": {
+        "2025-2026": {
+          "s": [
+            5,
+            5,
+            5,
+            5,
+            4,
+            4
+          ],
+          "a": 5
+        }
+      },
+      "AP Statistics": {
+        "2025-2026": {
+          "s": [
+            5,
+            5,
+            5,
+            5,
+            4,
+            5
+          ],
+          "a": 5
+        }
+      }
+    },
+    "Herbert Cao": {
+      "AP Physics C: Mechanics": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "a": 4
+        }
+      },
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            5,
+            5,
+            4
+          ],
+          "a": 4
+        }
+      },
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "a": 3
+        }
+      }
+    },
+    "Chan Chan": {
+      "AP Physics C: Mechanics": {
+        "2025-2026": {
+          "s": [
+            1,
+            3,
+            1,
+            1,
+            1,
+            3
+          ],
+          "a": 1
+        }
+      },
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            1,
+            3,
+            1,
+            1,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Marx Zhao": {
+      "AP Physics C: Mechanics": {
+        "2025-2026": {
+          "s": [
+            4,
+            3,
+            4,
+            4,
+            3,
+            3
+          ],
+          "a": 3
+        }
+      },
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            4,
+            3,
+            4,
+            5,
+            3,
+            4
+          ],
+          "a": 4
+        }
+      },
+      "AP Statistics": {
+        "2025-2026": {
+          "s": [
+            4,
+            3,
+            3,
+            4,
+            2,
+            2
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Evan Ye": {
+      "AP Physics C: Mechanics": {
+        "2025-2026": {
+          "s": [
+            2,
+            2,
+            2,
+            1,
+            3,
+            5
+          ],
+          "a": 1
+        }
+      },
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            1,
+            3,
+            5
+          ],
+          "a": 3
+        }
+      },
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            3,
+            3,
+            1,
+            2,
+            3
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Jenny Wang": {
+      "AP Physics C: Mechanics": {
+        "2025-2026": {
+          "s": [
+            2,
+            1,
+            2,
+            4,
+            3,
+            1
+          ],
+          "a": 1
+        }
+      },
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            3,
+            2,
+            3,
+            4,
+            3,
+            2
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Lon Li": {
+      "AP Physics C: Mechanics": {
+        "2025-2026": {
+          "s": [
+            5,
+            3,
+            5,
+            4,
+            4,
+            4
+          ],
+          "a": 3
+        }
+      },
+      "AP Statistics": {
+        "2025-2026": {
+          "s": [
+            5,
+            3,
+            4,
+            4,
+            4,
+            4
+          ],
+          "a": 4
+        }
+      }
+    },
+    "Owen Wei": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            2,
+            1,
+            2,
+            5,
+            3,
+            1
+          ],
+          "a": 2
+        }
+      },
+      "AP Macroeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            4,
+            5,
+            4,
+            3
+          ],
+          "a": 5
+        }
+      }
+    },
+    "Tom Gao": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            1,
+            1,
+            1,
+            2,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      },
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      },
+      "AP Macroeconomics": {
+        "2025-2026": {
+          "s": [
+            2,
+            1,
+            2,
+            1,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Antonia Yang": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            1,
+            2,
+            1,
+            3,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Shubert Ouyang": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            3,
+            1,
+            3,
+            3,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Morri Zhao": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            1,
+            1,
+            1,
+            2,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Katiana Tan": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            1,
+            3,
+            1,
+            3,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Siru Wu": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            4,
+            5,
+            3,
+            4
+          ],
+          "a": 4
+        }
+      },
+      "AP Statistics": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            3,
+            5,
+            3,
+            3
+          ],
+          "a": 3
+        }
+      }
+    },
+    "Selina Huang": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            3,
+            2,
+            3
+          ],
+          "a": null
+        }
+      },
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            5,
+            3,
+            3,
+            1,
+            3
+          ],
+          "a": 2
+        }
+      },
+      "AP Statistics": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            2,
+            2,
+            2,
+            2
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Eathan Liu": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            4,
+            3,
+            4,
+            3,
+            3,
+            4
+          ],
+          "a": 3
+        }
+      }
+    },
+    "Amelia Huang": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            2,
+            3,
+            3
+          ],
+          "a": 3
+        }
+      },
+      "AP Macroeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            2,
+            3,
+            3
+          ],
+          "a": 3
+        }
+      }
+    },
+    "Lily Li": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            4,
+            3,
+            3
+          ],
+          "a": 3
+        }
+      },
+      "AP Macroeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            2,
+            3,
+            3
+          ],
+          "a": 3
+        }
+      }
+    },
+    "Nichole Shu": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            5,
+            5,
+            5,
+            5,
+            5,
+            4
+          ],
+          "a": 5
+        }
+      }
+    },
+    "Owen Chen": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            5,
+            4,
+            3,
+            3,
+            2
+          ],
+          "a": 4
+        }
+      }
+    },
+    "Ginevra Gong": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            3,
+            3,
+            2,
+            2,
+            3
+          ],
+          "a": null
+        }
+      }
+    },
+    "Linda Li": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            3,
+            3,
+            4,
+            4
+          ],
+          "a": 4
+        }
+      }
+    },
+    "Yulia Pan": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            3,
+            4,
+            3,
+            2,
+            2
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Owen Huang": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            2,
+            3,
+            2,
+            2,
+            1,
+            3
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Mia Shao": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Andrina Song": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            4,
+            3,
+            2,
+            2,
+            2
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Eva Wu": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            4,
+            5,
+            1,
+            1
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Lucy Yang": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            2,
+            2,
+            2,
+            2,
+            2,
+            2
+          ],
+          "a": null
+        }
+      }
+    },
+    "Gavin Zhang": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            3,
+            4,
+            3,
+            4,
+            4
+          ],
+          "a": 4
+        }
+      }
+    },
+    "Simon Zeng": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            3,
+            2,
+            3,
+            2,
+            2,
+            2
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Una Zhang": {
+      "AP Microeconomics": {
+        "2025-2026": {
+          "s": [
+            5,
+            4,
+            5,
+            4,
+            4,
+            4
+          ],
+          "a": 4
+        }
+      }
+    },
+    "Ray Zhang": {
+      "AP Macroeconomics": {
+        "2025-2026": {
+          "s": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "a": 4
+        }
+      }
+    },
+    "David Wang": {
+      "AP Macroeconomics": {
+        "2025-2026": {
+          "s": [
+            2,
+            1,
+            2,
+            1,
+            1,
+            1
+          ],
+          "a": 1
+        }
+      }
+    },
+    "Mia Zhong": {
+      "AP Statistics": {
+        "2025-2026": {
+          "s": [
+            3,
+            2,
+            3,
+            3,
+            2,
+            2
+          ],
+          "a": 2
+        }
+      }
+    },
+    "Dirk Wang": {
+      "AP Calculus BC": {
+        "2025-2026": {
+          "s": [
+            4,
+            5,
+            4,
+            4,
+            5,
+            4
+          ],
+          "a": null
+        },
+        "2026-2027": {
+          "s": [
+            5,
+            5,
+            5,
+            4,
+            5,
+            5
+          ],
+          "a": null
+        }
+      }
+    }
+  },
+  "inferred": {
+    "Herbert Cao": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          4,
+          4,
+          5,
+          2,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 3,
+        "detail": [
+          {
+            "subject": "AP Physics C: Mechanics",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          },
+          {
+            "subject": "AP Calculus BC",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          },
+          {
+            "subject": "AP Microeconomics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Wode Wang": {
+      "2026-2027": null,
+      "2025-2026": {
+        "abilities": [
+          5,
+          5,
+          5,
+          5,
+          4,
+          5
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Physics C: Mechanics",
+            "actual": 5,
+            "predicted": 5,
+            "err": 0
+          },
+          {
+            "subject": "AP Statistics",
+            "actual": 5,
+            "predicted": 5,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "ZTest": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          3,
+          4,
+          3,
+          4,
+          3
+        ],
+        "rmse": null,
+        "n": 0,
+        "reliable": false,
+        "note": "本学年暂无实际 AP 分, 预测六维取自能力评估输入, 尚未计入模型校准"
+      }
+    },
+    "Chan Chan": {
+      "2025-2026": {
+        "abilities": [
+          1,
+          3,
+          1,
+          1,
+          1,
+          2
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Physics C: Mechanics",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          },
+          {
+            "subject": "AP Calculus BC",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Marx Zhao": {
+      "2025-2026": {
+        "abilities": [
+          5,
+          3,
+          4,
+          5,
+          2,
+          4
+        ],
+        "rmse": 0.577,
+        "maxErr": 1,
+        "n": 3,
+        "detail": [
+          {
+            "subject": "AP Physics C: Mechanics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          },
+          {
+            "subject": "AP Calculus BC",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          },
+          {
+            "subject": "AP Statistics",
+            "actual": 2,
+            "predicted": 3,
+            "err": 1
+          }
+        ],
+        "note": "模型大体可解释, 个别科目存在偏差",
+        "reliable": true
+      }
+    },
+    "Evan Ye": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          3,
+          3,
+          1,
+          3,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 3,
+        "detail": [
+          {
+            "subject": "AP Physics C: Mechanics",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          },
+          {
+            "subject": "AP Calculus BC",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          },
+          {
+            "subject": "AP Microeconomics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Jenny Wang": {
+      "2025-2026": {
+        "abilities": [
+          2,
+          1,
+          2,
+          4,
+          3,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Physics C: Mechanics",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          },
+          {
+            "subject": "AP Calculus BC",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Lon Li": {
+      "2025-2026": {
+        "abilities": [
+          5,
+          3,
+          4,
+          4,
+          4,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Physics C: Mechanics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          },
+          {
+            "subject": "AP Statistics",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Owen Wei": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          2,
+          3,
+          5,
+          3,
+          1
+        ],
+        "rmse": 0.707,
+        "maxErr": 1,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          },
+          {
+            "subject": "AP Macroeconomics",
+            "actual": 5,
+            "predicted": 4,
+            "err": 1
+          }
+        ],
+        "note": "模型大体可解释, 个别科目存在偏差",
+        "reliable": true
+      }
+    },
+    "Tom Gao": {
+      "2025-2026": {
+        "abilities": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 3,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          },
+          {
+            "subject": "AP Microeconomics",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          },
+          {
+            "subject": "AP Macroeconomics",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Antonia Yang": {
+      "2025-2026": {
+        "abilities": [
+          1,
+          2,
+          1,
+          3,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Shubert Ouyang": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          1,
+          3,
+          3,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Morri Zhao": {
+      "2025-2026": {
+        "abilities": [
+          1,
+          1,
+          1,
+          2,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Katiana Tan": {
+      "2025-2026": {
+        "abilities": [
+          1,
+          3,
+          1,
+          3,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Siru Wu": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          4,
+          4,
+          5,
+          2,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          },
+          {
+            "subject": "AP Statistics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Selina Huang": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          4,
+          3,
+          3,
+          2,
+          3
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          },
+          {
+            "subject": "AP Statistics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Eathan Liu": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          3,
+          4,
+          3,
+          3,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Calculus BC",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Amelia Huang": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          4,
+          3,
+          2,
+          3,
+          3
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          },
+          {
+            "subject": "AP Macroeconomics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Lily Li": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          4,
+          3,
+          2,
+          3,
+          3
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 2,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          },
+          {
+            "subject": "AP Macroeconomics",
+            "actual": 3,
+            "predicted": 3,
+            "err": 0
+          }
+        ],
+        "note": "模型可很好解释该生历史成绩",
+        "reliable": true
+      }
+    },
+    "Nichole Shu": {
+      "2025-2026": {
+        "abilities": [
+          5,
+          5,
+          5,
+          5,
+          5,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 5,
+            "predicted": 5,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Owen Chen": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          5,
+          4,
+          3,
+          3,
+          2
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Ginevra Gong": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          3,
+          3,
+          2,
+          2,
+          3
+        ],
+        "rmse": null,
+        "n": 0,
+        "reliable": false,
+        "note": "本学年暂无实际 AP 分, 预测六维取自能力评估输入, 尚未计入模型校准"
+      }
+    },
+    "Linda Li": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          4,
+          3,
+          3,
+          4,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Yulia Pan": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          3,
+          4,
+          3,
+          2,
+          2
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Owen Huang": {
+      "2025-2026": {
+        "abilities": [
+          2,
+          3,
+          2,
+          2,
+          2,
+          3
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Mia Shao": {
+      "2025-2026": {
+        "abilities": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Andrina Song": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          4,
+          3,
+          2,
+          2,
+          2
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Eva Wu": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          4,
+          4,
+          5,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Lucy Yang": {
+      "2025-2026": {
+        "abilities": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "rmse": null,
+        "n": 0,
+        "reliable": false,
+        "note": "本学年暂无实际 AP 分, 预测六维取自能力评估输入, 尚未计入模型校准"
+      }
+    },
+    "Gavin Zhang": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          3,
+          4,
+          3,
+          4,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Simon Zeng": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          2,
+          3,
+          2,
+          2,
+          2
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Una Zhang": {
+      "2025-2026": {
+        "abilities": [
+          5,
+          4,
+          5,
+          4,
+          4,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Microeconomics",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Ray Zhang": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Macroeconomics",
+            "actual": 4,
+            "predicted": 4,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "David Wang": {
+      "2025-2026": {
+        "abilities": [
+          2,
+          1,
+          2,
+          1,
+          1,
+          1
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Macroeconomics",
+            "actual": 1,
+            "predicted": 1,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Mia Zhong": {
+      "2025-2026": {
+        "abilities": [
+          3,
+          2,
+          3,
+          3,
+          2,
+          2
+        ],
+        "rmse": 0,
+        "maxErr": 0,
+        "n": 1,
+        "detail": [
+          {
+            "subject": "AP Statistics",
+            "actual": 2,
+            "predicted": 2,
+            "err": 0
+          }
+        ],
+        "note": "样本仅 1 科, 推断不唯一, 仅供参考",
+        "reliable": false
+      }
+    },
+    "Dirk Wang": {
+      "2025-2026": {
+        "abilities": [
+          4,
+          5,
+          4,
+          4,
+          5,
+          4
+        ],
+        "rmse": null,
+        "n": 0,
+        "reliable": false,
+        "note": "本学年暂无实际 AP 分, 预测六维取自能力评估输入, 尚未计入模型校准"
+      },
+      "2026-2027": {
+        "abilities": [
+          5,
+          5,
+          5,
+          4,
+          5,
+          5
+        ],
+        "rmse": null,
+        "n": 0,
+        "reliable": false,
+        "note": "本学年暂无实际 AP 分, 预测六维取自能力评估输入, 尚未计入模型校准"
+      }
+    }
+  },
+  "model": {
+    "abilities": [
+      "学习能力",
+      "学习态度",
+      "基础能力",
+      "英语能力",
+      "考试能力",
+      "抗压能力"
+    ],
+    "courseFormulas": {
+      "AP Calculus BC": {
+        "penaltyRates": [
+          0,
+          0.2,
+          0,
+          0,
+          0,
+          0
+        ],
+        "boostFactor": 0,
+        "offset": -0.2,
+        "threshold": 3,
+        "hasSpecial": false
+      },
+      "AP Macroeconomics": {
+        "penaltyRates": [
+          0.4,
+          0,
+          0,
+          0.2,
+          0,
+          0
+        ],
+        "boostFactor": 0.2,
+        "offset": 0.4,
+        "threshold": 3,
+        "hasSpecial": false
+      },
+      "AP Microeconomics": {
+        "penaltyRates": [
+          0,
+          0,
+          0,
+          0.2,
+          0.6,
+          0
+        ],
+        "boostFactor": 0,
+        "offset": 0,
+        "threshold": 3,
+        "hasSpecial": false
+      },
+      "AP Physics C: Electricity & Magnetism": {
+        "penaltyRates": [
+          0.6,
+          0.8,
+          0,
+          0,
+          0,
+          0
+        ],
+        "boostFactor": 0,
+        "offset": 0,
+        "threshold": 4,
+        "hasSpecial": false
+      },
+      "AP Physics C: Mechanics": {
+        "penaltyRates": [
+          0.6,
+          0.8,
+          0,
+          0,
+          0,
+          0
+        ],
+        "boostFactor": 0,
+        "offset": 0,
+        "threshold": 4,
+        "hasSpecial": false
+      },
+      "AP Statistics": {
+        "penaltyRates": [
+          0,
+          0,
+          0,
+          0,
+          0.4,
+          0
+        ],
+        "boostFactor": 0,
+        "offset": -0.2,
+        "threshold": 3,
+        "hasSpecial": false
+      }
+    }
+  },
+  "meta": {
+    "createdAt": "2026-08-02T05:32:22.913Z",
+    "version": 2,
+    "seededFrom": "EXAMPLE_DATA (initial demo index.html)"
+  }
+}

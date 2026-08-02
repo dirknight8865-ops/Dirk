@@ -1,0 +1,88 @@
+<%- include('../partials/head', {title:'数据分析 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'analytics'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">数据分析</h1>
+    <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年：<%= year %></span>
+  </div>
+  <div class="form-row" style="max-width:320px;"><label>按科目筛选(留空=全部)</label>
+    <select id="subjFilter"><option value="">全部科目</option><% courseNames.forEach(c=>{ %><option value="<%= c %>"><%= c %></option><% }) %></select>
+  </div>
+  <div class="row">
+    <div class="col card">
+      <h2>预测排名</h2>
+      <div class="table-wrap"><table class="data"><thead><tr><th>学生</th><th>科目</th><th>预测</th><th>实际</th></tr></thead><tbody id="rankBody"></tbody></table></div>
+    </div>
+    <div class="col card">
+      <h2>预测分分布</h2>
+      <div class="chart-box"><canvas id="distChart"></canvas></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col card">
+      <h2>学生能力雷达</h2>
+      <div class="form-row" style="max-width:280px;"><label>选择学生</label><select id="stuPick"></select></div>
+      <div class="chart-box"><canvas id="radarChart"></canvas></div>
+    </div>
+    <div class="col card">
+      <h2>群体洞察</h2>
+      <div id="insightBox" class="muted">加载中...</div>
+    </div>
+  </div>
+</div>
+<script>
+const abilities = <%- JSON.stringify(abilities) %>;
+let distChart, radarChart, points=[];
+async function load(){
+  const s=document.getElementById('subjFilter').value;
+  const r=await (await fetch('/admin/api/points'+(s?'?subject='+encodeURIComponent(s):''))).json();
+  points=r.data;
+  renderRank(); renderDist(); renderPick(); renderInsight();
+}
+function renderRank(){
+  const tb=document.getElementById('rankBody'); tb.innerHTML='';
+  points.slice().sort((a,b)=>b.prediction-a.prediction).forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${p.student}</td><td>${p.subject}</td><td><span class="badge ps-${p.prediction}">${p.prediction}</span></td><td>${p.actual!=null?p.actual:'-'}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function renderDist(){
+  const cnt={1:0,2:0,3:0,4:0,5:0};
+  points.forEach(p=>cnt[p.prediction]=(cnt[p.prediction]||0)+1);
+  const ctx=document.getElementById('distChart');
+  if(distChart) distChart.destroy();
+  distChart=new Chart(ctx,{type:'bar',data:{labels:['1','2','3','4','5'],datasets:[{label:'记录数',data:[cnt[1],cnt[2],cnt[3],cnt[4],cnt[5]],backgroundColor:['#ef4444','#f97316','#f59e0b','#3b82f6','#22c55e']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+}
+function renderPick(){
+  const sel=document.getElementById('stuPick'); const before=sel.value;
+  sel.innerHTML=''; const names=[...new Set(points.map(p=>p.student))];
+  names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+  if(before && names.includes(before)) sel.value=before;
+  drawRadar();
+}
+function drawRadar(){
+  const name=document.getElementById('stuPick').value; if(!name)return;
+  const avg=abilities.map((_,i)=>{const v=points.filter(p=>p.student===name).map(p=>p.vector[i]);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0;});
+  const ctx=document.getElementById('radarChart');
+  if(radarChart) radarChart.destroy();
+  radarChart=new Chart(ctx,{type:'radar',data:{labels:abilities,datasets:[{label:name,data:avg,fill:true,backgroundColor:'rgba(59,130,246,.2)',borderColor:'#3b82f6',pointBackgroundColor:'#3b82f6'}]},options:{scales:{r:{min:1,max:5,ticks:{stepSize:1}}}}});
+}
+function renderInsight(){
+  const box=document.getElementById('insightBox');
+  const withActual=points.filter(p=>p.actual!=null);
+  const below3={};
+  abilities.forEach((_,i)=>below3[i]=0);
+  points.forEach(p=>p.vector.forEach((v,i)=>{if(v<3)below3[i]++;}));
+  let html=`<p>共 ${points.length} 条记录; ${withActual.length} 条含真实分。</p>`;
+  html+=`<p style="margin-top:6px;">各项能力低于 3 分(合格线)的频次:</p><ul style="margin:4px 0 0 18px;">`;
+  abilities.forEach((ab,i)=>{ if(below3[i]>0) html+=`<li>${ab}: ${below3[i]} 次</li>`; });
+  html+=`</ul>`;
+  if(withActual.length<5) html+=`<p class="muted" style="margin-top:8px;">真实分不足 5 条, 到「校准回测」可进一步量化各能力影响。</p>`;
+  box.innerHTML=html;
+}
+document.getElementById('subjFilter').onchange=load;
+document.getElementById('stuPick').onchange=drawRadar;
+load();
+</script>
+</body></html>

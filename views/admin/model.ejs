@@ -1,0 +1,126 @@
+<%- include('../partials/head', {title:'模型配置 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'model'}) %>
+<div class="app">
+  <h1 style="font-size:22px;font-weight:700;margin-bottom:8px;">评估模型配置</h1>
+  <p class="muted" style="margin-bottom:16px;">各科目 AP 预测公式可在此编辑并保存。base = 六项能力均值；低于及格线的能力按罚率扣分；攒够真实分后到「校准回测」用数据反推更优权重。</p>
+  <div id="msg"></div>
+
+  <div class="card">
+    <h2>科目预测公式</h2>
+    <div class="form-inline" style="gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+      <select id="subjectSel" style="min-width:280px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;"></select>
+      <span class="muted" style="font-size:12px;">选择一个科目进行配置，修改后保存即生效</span>
+    </div>
+    <div id="modelBox"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="btn btn-sm" onclick="save()">保存全部修改</button>
+      <button class="btn btn-sm btn-primary" onclick="saveAndReestimate()">保存并用新模型重新估算</button>
+      <span class="muted" style="font-size:12px;">改完科目权重后点右侧按钮，系统会用新模型立即重算全班的能力推断与评定。</span>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+      <h3 style="margin:0;">能力罚率可视化</h3>
+      <div style="display:flex;gap:8px;">
+        <button id="btnBar" class="btn btn-sm btn-primary" onclick="setChart('bar')">柱状图</button>
+        <button id="btnPie" class="btn btn-sm btn-outline" onclick="setChart('pie')">饼图（占比）</button>
+      </div>
+    </div>
+    <p class="muted" style="font-size:12px;margin:0 0 10px;" id="chartHint"></p>
+    <canvas id="penaltyChart" height="260"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const abilities = <%- JSON.stringify(abilities) %>;
+const courseNames = <%- JSON.stringify(courseNames) %>;
+let formulas = <%- JSON.stringify(model.courseFormulas) %>;
+let currentSubject = courseNames[0];
+let chart = null;
+let chartType = 'bar';
+const COLORS = ['#4f7cff','#22a06b','#f5a623','#9b59b6','#e74c3c','#16a2b8'];
+
+function populateSubjects(){
+  const sel = document.getElementById('subjectSel');
+  sel.innerHTML = courseNames.map(c=>`<option value="${c}">${c}</option>`).join('');
+  sel.value = currentSubject;
+  sel.onchange = ()=>{ currentSubject = sel.value; renderSubject(); updateChart(); };
+}
+
+function renderSubject(){
+  const f = formulas[currentSubject];
+  const box = document.getElementById('modelBox');
+  let html = `<h3 style="margin:6px 0 12px;">${currentSubject}</h3><div class="grid2">`;
+  abilities.forEach((ab,i)=>{
+    html += `<div class="form-row"><label>${ab} 罚率</label><input type="number" step="0.05" min="0" max="1" id="pr_${i}" value="${f.penaltyRates[i]}" oninput="onPr(${i})"></div>`;
+  });
+  html += `</div><div class="grid2">
+    <div class="form-row"><label>boost 系数</label><input type="number" step="0.05" min="0" max="1" id="bf" value="${f.boostFactor}" oninput="onBf()"></div>
+    <div class="form-row"><label>offset</label><input type="number" step="0.05" min="-2" max="2" id="of" value="${f.offset}" oninput="onOf()"></div>
+    <div class="form-row"><label>及格线阈值</label><input type="number" step="0.5" min="1" max="5" id="th" value="${f.threshold}" oninput="onTh()"></div>
+  </div>`;
+  box.innerHTML = html;
+}
+
+function onPr(i){ formulas[currentSubject].penaltyRates[i] = +document.getElementById('pr_'+i).value; updateChart(); }
+function onBf(){ formulas[currentSubject].boostFactor = +document.getElementById('bf').value; }
+function onOf(){ formulas[currentSubject].offset = +document.getElementById('of').value; }
+function onTh(){ formulas[currentSubject].threshold = +document.getElementById('th').value; }
+
+function updateChart(){
+  const f = formulas[currentSubject];
+  const data = f.penaltyRates.slice();
+  const ctx = document.getElementById('penaltyChart');
+  if(chart){ chart.destroy(); }
+  if(chartType === 'bar'){
+    document.getElementById('chartHint').textContent = '柱状图直接比较各能力罚率的高低——越高代表该能力偏弱时对预测分的杀伤越大。';
+    chart = new Chart(ctx, {
+      type:'bar',
+      data:{ labels:abilities, datasets:[{ label:'罚率', data, backgroundColor:COLORS, borderRadius:4 }] },
+      options:{ responsive:true, plugins:{ legend:{display:false}, title:{display:true,text:currentSubject+' · 各能力罚率（0–1）'} }, scales:{ y:{ beginAtZero:true, max:1 } } }
+    });
+  } else {
+    const sum = data.reduce((a,b)=>a+b,0);
+    document.getElementById('chartHint').textContent = '饼图按归一化占比展示各能力罚率的相对权重（总和不固定，已折算为 100%）。';
+    chart = new Chart(ctx, {
+      type:'pie',
+      data:{ labels:abilities, datasets:[{ data: sum>0?data:[1,1,1,1,1,1], backgroundColor:COLORS.slice() }] },
+      options:{ responsive:true, plugins:{ legend:{position:'right'}, title:{display:true,text:currentSubject+' · 罚率占比（归一化）'} } }
+    });
+  }
+}
+
+function setChart(t){
+  chartType = t;
+  document.getElementById('btnBar').className = 'btn btn-sm '+(t==='bar'?'btn-primary':'btn-outline');
+  document.getElementById('btnPie').className = 'btn btn-sm '+(t==='pie'?'btn-primary':'btn-outline');
+  updateChart();
+}
+
+function save(){
+  const out={};
+  Object.keys(formulas).forEach(c=>{
+    out[c]={penaltyRates:formulas[c].penaltyRates.slice(),boostFactor:formulas[c].boostFactor,offset:formulas[c].offset,threshold:formulas[c].threshold,hasSpecial:false};
+  });
+  return fetch('/admin/api/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({formulas:out})})
+    .then(r=>r.json()).then(r=>{ if(r.ok)document.getElementById('msg').innerHTML='<div class="alert alert-ok">已保存</div>'; else alert(r.error); return r; });
+}
+// 保存模型后立即用新模型重算全班推断（评定）
+function saveAndReestimate(){
+  document.getElementById('msg').innerHTML='<div class="alert">正在用新模型重算…</div>';
+  save().then(r=>{
+    if(!r || !r.ok) return;
+    return fetch('/admin/api/reestimate',{method:'POST'}).then(j=>j.json()).then(j=>{
+      if(j.ok) document.getElementById('msg').innerHTML='<div class="alert alert-ok">已用新模型重算 '+j.recomputed+' 名学生 · 可到「能力推断」查看</div>';
+      else alert(j.error);
+    });
+  });
+}
+
+populateSubjects();
+renderSubject();
+updateChart();
+</script>
+</body></html>

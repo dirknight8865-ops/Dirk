@@ -1,0 +1,15 @@
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">AP 能力评估 <span class="tag">学生端</span></div>
+    <nav class="nav">
+      <a href="/student/profile" class="<%= active==='profile'?'active':'' %>">我的画像</a>
+      <a href="/student/assessment" class="<%= active==='assessment'?'active':'' %>">我的评估</a>
+      <a href="/student/advice" class="<%= active==='advice'?'active':'' %>">提升建议</a>
+      <a href="/student/history" class="<%= active==='history'?'active':'' %>">历史记录</a>
+      <span class="right">
+        <span>👤 <%= user.username %></span>
+        <a href="/logout">登出</a>
+      </span>
+    </nav>
+  </div>
+</header>

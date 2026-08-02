@@ -1,0 +1,64 @@
+<%- include('../partials/head', {title:'数据运维 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'ops'}) %>
+<div class="app">
+  <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">数据运维</h1>
+  <div id="msg"></div>
+  <div class="row">
+    <div class="col card">
+      <h2>导出 / 备份</h2>
+      <p class="muted">导出全部数据(学生、评分、模型配置、账号)为 JSON 文件。建议定期备份, 文件即数据库, 可直接拷贝迁移。</p>
+      <a class="btn btn-sm" href="/admin/api/export">下载备份 JSON</a>
+    </div>
+    <div class="col card">
+      <h2>导入</h2>
+      <p class="muted">从备份 JSON 恢复(会覆盖当前全部数据)。</p>
+      <div class="form-row"><input type="file" id="impFile" accept=".json"></div>
+      <button class="btn btn-sm btn-outline" onclick="doImport()">导入并覆盖</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>数据库位置</h2>
+    <p class="muted" id="dbpath"></p>
+  </div>
+  <div class="card" style="margin-top:16px;">
+    <h2>学年管理</h2>
+    <p class="muted">新建学年后会自动设为"当前学年"，之后的评分录入、推断与重新估算都基于该学年。历年数据会保留，可随时切回查看或导出。</p>
+    <div class="form-inline" style="gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <input id="newYear" placeholder="如 2026-2027" style="padding:8px 10px;border:1px solid var(--border);border-radius:6px;">
+      <button class="btn btn-sm" onclick="createYear()">新建学年</button>
+    </div>
+    <div id="yearList"></div>
+  </div>
+</div>
+<script>
+const YEARS = <%- JSON.stringify(years) %>;
+const ACTIVE_YEAR = <%- JSON.stringify(activeYear) %>;
+document.getElementById('dbpath').textContent='data/db.json (JSON 文件存储, 零依赖)';
+function renderYears(){
+  const box=document.getElementById('yearList');
+  box.innerHTML='<table class="data"><thead><tr><th>学年</th><th>状态</th><th>操作</th></tr></thead><tbody>'+
+    YEARS.map(y=>{
+      const isActive = y===ACTIVE_YEAR;
+      return `<tr><td>${y}</td><td>${isActive?'<span class="badge good">当前</span>':'—'}</td><td>${isActive?'':'<button class="btn btn-sm btn-outline" onclick="setActive(\''+y+'\')">设为当前</button>'}</td></tr>`;
+    }).join('')+'</tbody></table>';
+}
+async function createYear(){
+  const y=document.getElementById('newYear').value.trim(); if(!y)return alert('请输入学年，如 2026-2027');
+  const r=await (await fetch('/admin/api/years',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({year:y})})).json();
+  if(r.ok){ YEARS.length=0; r.years.forEach(x=>YEARS.push(x)); document.getElementById('newYear').value=''; renderYears(); document.getElementById('msg').innerHTML='<div class="alert alert-ok">已新建 '+y+' 并设为当前学年，可前往「评分录入」开始录入</div>'; }
+  else alert(r.error);
+}
+async function setActive(y){
+  const r=await (await fetch('/admin/api/years/active',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({year:y})})).json();
+  if(r.ok){ document.getElementById('newYear').value=''; location.reload(); }
+  else alert(r.error);
+}
+renderYears();
+async function doImport(){
+  const f=document.getElementById('impFile').files[0]; if(!f)return alert('请选择文件');
+  const text=await f.text(); let obj; try{obj=JSON.parse(text);}catch(e){return alert('JSON 解析失败');}
+  const r=await (await fetch('/admin/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)})).json();
+  if(r.ok)document.getElementById('msg').innerHTML='<div class="alert alert-ok">导入成功, 请刷新页面</div>'; else alert(r.error);
+}
+</script>
+</body></html>

@@ -1,0 +1,208 @@
+<%- include('../partials/head', { title: '能力推断 · 后台' }) %>
+<%- include('../partials/nav-admin', { active: 'infer', user: user }) %>
+<div class="app">
+  <div class="card" style="margin-bottom:16px;">
+    <h2 style="margin:0 0 6px;">逆向能力推断</h2>
+    <p style="color:var(--text2);font-size:13px;margin:0 0 14px;">
+      基于学生已录入的<strong>历史实际 AP 分</strong>，反推其最可能产生这些成绩的能力向量（预测六维，1–5），
+      并预测各科 AP 分。有实际分则<strong>对比偏差并计入模型校准</strong>；尚无实际分时，按能力评估输入给出预测六维与预测分，<strong>不计入模型</strong>。
+    </p>
+    <div class="form-inline" style="flex-wrap:wrap;gap:10px;">
+      <select id="yearSel" style="min-width:160px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;"></select>
+      <select id="studentSel" style="min-width:220px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;"></select>
+      <button class="btn" id="btnInfer">推断该生能力</button>
+      <button class="btn btn-outline" id="btnInferAll">对全班批量推断</button>
+    </div>
+    <div id="yearNote" style="color:var(--text2);font-size:13px;margin-top:8px;"></div>
+  </div>
+
+  <div id="result" class="empty-state" style="display:none;"></div>
+
+  <!-- 单个学生结果 -->
+  <div id="singlePanel" style="display:none;">
+    <div id="predictBanner" class="card" style="margin-bottom:16px;"></div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 style="margin:0 0 10px;">能力画像对比</h3>
+        <canvas id="radar" height="260"></canvas>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 10px;">推断质量 / 状态</h3>
+        <div id="qualityBox"></div>
+        <table class="tbl" id="abilityCmp" style="margin-top:12px;">
+          <thead><tr><th>能力维度</th><th>手动均值</th><th>预测六维</th><th>差</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <h3 style="margin:0 0 10px;">各科预测 vs 实际</h3>
+      <table class="tbl" id="detailTbl">
+        <thead><tr><th>科目</th><th>预测分数</th><th>实际 AP</th><th>偏差</th><th>状态</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 全班结果 -->
+  <div id="batchPanel" class="card" style="display:none;margin-top:16px;">
+    <h3 style="margin:0 0 10px;">全班预测汇总</h3>
+    <p style="color:var(--text2);font-size:12px;margin:0 0 10px;">预测六维取自实际分校准（已计入模型）或能力评估输入（未计入）；平均预测分为各科目预测均值。</p>
+    <div style="overflow-x:auto;">
+      <table class="tbl" id="batchTbl">
+        <thead><tr><th>学生</th><th>预测六维 (学/态/基/英/考/抗)</th><th>平均预测分</th><th>计入模型科数</th><th>状态</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const YEARS = <%- JSON.stringify(years) %>;
+const ACTIVE_YEAR = <%- JSON.stringify(activeYear) %>;
+let radarChart = null;
+
+function buildYearSel(){
+  const sel=document.getElementById('yearSel');
+  sel.innerHTML='';
+  YEARS.forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y+(y===ACTIVE_YEAR?'（当前）':''); sel.appendChild(o); });
+  sel.value=ACTIVE_YEAR;
+  document.getElementById('yearNote').textContent='当前学年：'+sel.value+'（推断基于该学年已录入的实际分）';
+}
+function curYear(){ return document.getElementById('yearSel').value || ACTIVE_YEAR; }
+
+function loadStudents() {
+  return fetch('/admin/api/students/detail').then(r => r.json()).then(j => j.data || []);
+}
+
+function renderSelector(list) {
+  const sel = document.getElementById('studentSel');
+  sel.innerHTML = '<option value="">— 选择学生 —</option>' + list.map(s => `<option value="${s.name}">${s.name}（${s.subjectCount} 科）</option>`).join('');
+}
+
+function showResult(html) { const el = document.getElementById('result'); el.style.display = 'block'; el.innerHTML = html; }
+
+function inferOne(name) {
+  if (!name) { showResult('<div class="empty-state"><div style="font-size:34px;">🧭</div><p>请先选择一名学生</p></div>'); return; }
+  document.getElementById('yearNote').textContent='当前学年：'+curYear()+'（推断基于该学年已录入的实际分）';
+  fetch('/admin/api/infer', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ name, year: curYear() })
+  }).then(r => r.json()).then(j => {
+    if (!j.ok) { showResult('<div class="empty-state"><div style="font-size:34px;">⚠️</div><p>' + j.error + '</p></div>'); document.getElementById('singlePanel').style.display='none'; return; }
+    document.getElementById('result').style.display = 'none';
+    renderSingle(j);
+  });
+}
+
+function renderSingle(j) {
+  document.getElementById('batchPanel').style.display = 'none';
+  const sp = document.getElementById('singlePanel'); sp.style.display = 'block';
+  const inf = j.inferred, mp = j.manualProfile;
+  const isCalibrated = j.source === 'calibrated';
+
+  // 预测六维 横幅
+  const statusBadge = isCalibrated
+    ? '<span class="badge good">已用实际 AP 校准</span>'
+    : '<span class="badge warn">仅评估输入 · 未计入模型</span>';
+  document.getElementById('predictBanner').innerHTML =
+    `<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+       <div><div style="font-size:13px;color:var(--text2);">预测六维（学 / 态 / 基 / 英 / 考 / 抗）</div>
+       <div style="font-size:22px;font-weight:700;letter-spacing:2px;margin-top:4px;">${inf.abilities.join('  /  ')}</div></div>
+       <div style="text-align:right;">${statusBadge}<div style="font-size:12px;color:var(--text2);margin-top:6px;">学年 ${j.year}</div></div>
+     </div>`;
+
+  // 质量框
+  const rmseTxt = inf.rmse == null ? '—' : inf.rmse;
+  const cls = inf.rmse == null ? 'warn' : inf.rmse <= 0.5 ? 'good' : inf.rmse <= 1.0 ? 'warn' : 'bad';
+  document.getElementById('qualityBox').innerHTML = `
+    <div style="font-size:28px;font-weight:700;color:var(--${cls === 'good' ? 'accent' : cls === 'warn' ? 'warn' : 'danger'});">RMSE ${rmseTxt}</div>
+    <div style="color:var(--text2);font-size:13px;margin-top:4px;">学年 ${j.year} · 基于 ${inf.n} 个实际分 · ${inf.reliable ? '样本充足' : '样本不足'}</div>
+    <div class="badge ${cls}" style="margin-top:8px;display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;">${inf.note}</div>`;
+
+  // 能力对比表
+  const tb = document.querySelector('#abilityCmp tbody');
+  tb.innerHTML = ABILITIES.map((a, i) => {
+    const diff = (inf.abilities[i] - mp[i]);
+    const dcls = diff === 0 ? '' : diff > 0 ? 'up' : 'down';
+    const dsign = diff > 0 ? '+' : '';
+    return `<tr><td>${a}</td><td>${mp[i]}</td><td><strong>${inf.abilities[i]}</strong></td><td class="${dcls}">${dsign}${diff}</td></tr>`;
+  }).join('');
+
+  // 明细表
+  const dt = document.querySelector('#detailTbl tbody');
+  dt.innerHTML = j.predictedAll.map(d => {
+    const e = d.actual != null ? Math.abs(d.predicted - d.actual) : '-';
+    const ecls = d.actual != null && e === 0 ? 'good' : d.actual != null && e >= 1 ? 'bad' : '';
+    const stBadge = d.counted ? '<span class="badge good">已计入模型</span>' : '<span class="badge warn">预测·未计入</span>';
+    return `<tr><td>${d.subject}</td><td>${d.predicted != null ? d.predicted : '—'}</td><td>${d.actual != null ? d.actual : '—'}</td><td class="${ecls}">${e}</td><td>${stBadge}</td></tr>`;
+  }).join('');
+
+  // 雷达
+  if (radarChart) radarChart.destroy();
+  const ctx = document.getElementById('radar').getContext('2d');
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ABILITIES,
+      datasets: [
+        { label: '手动均值', data: mp, borderColor: '#94a3b8', backgroundColor: 'rgba(148,163,184,0.15)', pointBackgroundColor: '#94a3b8' },
+        { label: '预测六维', data: inf.abilities, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.18)', pointBackgroundColor: '#3b82f6' }
+      ]
+    },
+    options: { scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+function inferAll() {
+  fetch('/admin/api/infer/all', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ year: curYear() }) }).then(r => r.json()).then(j => {
+    if (!j.ok) { showResult('<div class="empty-state"><p>' + j.error + '</p></div>'); return; }
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('singlePanel').style.display = 'none';
+    document.getElementById('yearNote').textContent = '已完成学年 ' + j.year + ' 全班推断（' + j.results.length + ' 人）';
+    const bp = document.getElementById('batchPanel'); bp.style.display = 'block';
+    const tb = document.querySelector('#batchTbl tbody');
+    if (j.results.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="color:var(--text2);">本学年暂无学生能力录入</td></tr>'; return; }
+    tb.innerHTML = j.results.map(r => {
+      const stBadge = r.source === 'calibrated'
+        ? '<span class="badge good">已校准</span>'
+        : '<span class="badge warn">仅预测·未计入</span>';
+      return `<tr>
+        <td><a href="#" onclick="selectAndInfer('${r.name}');return false;">${r.name}</a></td>
+        <td>${r.abilities.join(' / ')}</td>
+        <td>${r.avgPredicted != null ? r.avgPredicted : '—'}</td>
+        <td>${r.counted}</td>
+        <td>${stBadge}</td>
+      </tr>`;
+    }).join('');
+  });
+}
+
+function selectAndInfer(name) {
+  document.getElementById('studentSel').value = name;
+  inferOne(name);
+}
+
+document.getElementById('btnInfer').onclick = () => inferOne(document.getElementById('studentSel').value);
+document.getElementById('btnInferAll').onclick = inferAll;
+document.getElementById('yearSel').onchange = () => {
+  document.getElementById('yearNote').textContent = '当前学年：' + curYear() + '（推断基于该学年已录入的实际分）';
+  document.getElementById('singlePanel').style.display = 'none';
+  document.getElementById('batchPanel').style.display = 'none';
+  document.getElementById('result').style.display = 'none';
+};
+buildYearSel();
+loadStudents().then(renderSelector);
+</script>
+<style>
+.badge.good { background:#dcfce7; color:#15803d; }
+.badge.warn { background:#fef9c3; color:#a16207; }
+.badge.bad  { background:#fee2e2; color:#b91c1c; }
+.up { color:#15803d; } .down { color:#b91c1c; }
+.tbl td.good { color:#15803d; font-weight:600; } .tbl td.bad { color:#b91c1c; font-weight:600; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media(max-width:820px){ .grid-2{ grid-template-columns:1fr; } }
+</style>
+</div>

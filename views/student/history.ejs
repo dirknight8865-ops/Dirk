@@ -1,0 +1,15 @@
+<%- include('../partials/head', {title:'历史记录 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'history'}) %>
+<div class="app">
+  <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">历史记录</h1>
+  <div class="card">
+    <h2>历年已出真实 AP 分的科目</h2>
+    <table class="data"><thead><tr><th>学年</th><th>科目</th><th>实际分</th><th>系统预测</th><th>误差</th></tr></thead><tbody>
+    <% history.forEach(h=>{ const err=Math.abs(h.actual-h.prediction); %>
+      <tr><td><%= h.year %></td><td><%= h.subject %></td><td><strong><%= h.actual %></strong></td><td><%= h.prediction %></td><td><%= err.toFixed(1) %></td></tr>
+    <% }) %>
+    </tbody></table>
+    <% if(history.length===0){ %><p class="muted">暂无已出分的记录。</p><% } %>
+  </div>
+</div>
+</body></html>

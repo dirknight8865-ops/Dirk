@@ -1,0 +1,31 @@
+<%- include('../partials/head', {title:'总览 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'dashboard'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">分析总览</h1>
+    <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">当前学年：<%= year %></span>
+  </div>
+  <div class="row" style="margin-bottom:16px;">
+    <div class="stat"><div class="n"><%= stats.students %></div><div class="l">学生数</div></div>
+    <div class="stat"><div class="n"><%= stats.totalSubjects %></div><div class="l">本年录入科目数</div></div>
+    <div class="stat"><div class="n"><%= stats.totalScores %></div><div class="l">评分记录</div></div>
+    <div class="stat"><div class="n"><%= stats.withActual %></div><div class="l">含真实AP分(可校准)</div></div>
+  </div>
+  <div class="card">
+    <h2>预测 AP 分分布</h2>
+    <div class="chart-box"><canvas id="distChart"></canvas></div>
+  </div>
+  <div class="card">
+    <h2>快速入口</h2>
+    <p class="muted">从「评分录入」开始添加学生能力分;攒够 5 条以上真实 AP 分后, 到「校准回测」验证模型权重。</p>
+  </div>
+</div>
+<script>
+const dist = <%- JSON.stringify(stats.dist) %>;
+new Chart(document.getElementById('distChart'), {
+  type: 'bar',
+  data: { labels: ['1分','2分','3分','4分','5分'], datasets: [{ label:'人数', data:[dist[1]||0,dist[2]||0,dist[3]||0,dist[4]||0,dist[5]||0], backgroundColor:['#ef4444','#f97316','#f59e0b','#3b82f6','#22c55e'] }] },
+  options: { plugins:{legend:{display:false}}, scales:{ y:{ beginAtZero:true, ticks:{precision:0} } } }
+});
+</script>
+</body></html>

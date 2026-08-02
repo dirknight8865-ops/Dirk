@@ -1,0 +1,31 @@
+<%- include('../partials/head', {title:'我的画像 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'profile'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;"><%= data.name %> 的能力画像</h1>
+    <span style="background:var(--green,#22c55e);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= data.year %></span>
+  </div>
+  <div class="row">
+    <div class="col card">
+      <h2>综合能力雷达(各科平均)</h2>
+      <div class="chart-box"><canvas id="radar"></canvas></div>
+    </div>
+    <div class="col card">
+      <h2>各科目能力分</h2>
+      <table class="data"><thead><tr><th>科目</th><% abilities.forEach(a=>{ %><th><%= a.slice(0,2) %></th><% }) %></tr></thead><tbody id="tb"></tbody></table>
+    </div>
+  </div>
+</div>
+<script>
+const abilities = <%- JSON.stringify(abilities) %>;
+const data = <%- JSON.stringify(data) %>;
+const tb=document.getElementById('tb');
+data.subjects.forEach(s=>{
+  const tr=document.createElement('tr');
+  let cells=`<td>${s.subject}</td>`;
+  s.scores.forEach(v=>cells+=`<td>${v!=null?v:'-'}</td>`);
+  tr.innerHTML=cells; tb.appendChild(tr);
+});
+new Chart(document.getElementById('radar'),{type:'radar',data:{labels:abilities,datasets:[{label:data.name,data:data.avg,fill:true,backgroundColor:'rgba(34,197,94,.2)',borderColor:'#22c55e',pointBackgroundColor:'#22c55e'}]},options:{scales:{r:{min:1,max:5,ticks:{stepSize:1}}}}});
+</script>
+</body></html>

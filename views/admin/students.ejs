@@ -1,0 +1,88 @@
+<%- include('../partials/head', {title:'学生管理 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'students'}) %>
+<div class="app">
+  <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">学生管理</h1>
+  <div id="msg"></div>
+  <div class="row">
+    <div class="col card">
+      <h2>学生档案</h2>
+      <div class="form-row"><label>新增学生姓名</label><input id="newName" placeholder="输入姓名"></div>
+      <button class="btn btn-sm" onclick="addStudent()">添加学生</button>
+      <h3>学生列表</h3>
+      <table class="data">
+        <thead><tr><th>姓名</th><th>科目数</th><th>关联账号</th><th>操作</th></tr></thead>
+        <tbody id="stuBody"></tbody>
+      </table>
+    </div>
+    <div class="col card">
+      <h2>学生登录账号</h2>
+      <div class="form-row"><label>用户名</label><input id="accUser" placeholder="登录用户名"></div>
+      <div class="form-row"><label>密码</label><input id="accPass" type="password" placeholder="初始密码"></div>
+      <div class="form-row"><label>关联学生(可选)</label>
+        <select id="accStu"><option value="">不关联</option><% rows.forEach(r=>{ %><option value="<%= r.name %>"><%= r.name %></option><% }) %></select>
+      </div>
+      <button class="btn btn-sm" onclick="addAccount()">创建账号</button>
+      <h3>账号列表</h3>
+      <table class="data">
+        <thead><tr><th>用户名</th><th>关联学生</th><th>操作</th></tr></thead>
+        <tbody id="accBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+const rows = <%- JSON.stringify(rows) %>;
+function render(){
+  const tb=document.getElementById('stuBody'); tb.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${r.name}</td><td>${r.subjectCount}</td><td>${r.account||'<span class=muted>未关联</span>'}</td><td><button class="btn btn-sm btn-outline" onclick="rename('${encodeURIComponent(r.name)}')">改名</button> <button class="btn btn-sm btn-danger" onclick="del('${encodeURIComponent(r.name)}')">删除</button></td>`;
+    tb.appendChild(tr);
+  });
+  const ab=document.getElementById('accBody'); ab.innerHTML='';
+  // 账号来自后端重新拉取
+}
+async function refresh(){
+  const r=await (await fetch('/admin/api/students')).json();
+  // 重新拉账号
+  const users=await (await fetch('/admin/api/accounts')).json();
+  rows.length=0; r.data.forEach(n=>rows.push({name:n,subjectCount:0,account:null}));
+  // 合并科目数 & 账号
+  const stuRes=await (await fetch('/admin/api/students/detail')).json();
+  render2(stuRes.data||[], users.data||[]);
+}
+async function addStudent(){
+  const name=document.getElementById('newName').value.trim();
+  if(!name) return;
+  const r=await (await fetch('/admin/api/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})).json();
+  if(r.ok){document.getElementById('newName').value='';refresh();} else alert(r.error);
+}
+function rename(n){const nn=prompt('新姓名',decodeURIComponent(n));if(nn)fetch('/admin/api/students/rename',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldName:decodeURIComponent(n),newName:nn})}).then(refresh);}
+function del(n){if(confirm('确认删除该学生及其所有评分?'))fetch('/admin/api/students/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:decodeURIComponent(n)})}).then(refresh);}
+async function addAccount(){
+  const username=document.getElementById('accUser').value.trim();
+  const password=document.getElementById('accPass').value;
+  const studentName=document.getElementById('accStu').value;
+  if(!username||!password)return alert('用户名和密码必填');
+  const r=await (await fetch('/admin/api/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,studentName})})).json();
+  if(r.ok){document.getElementById('accUser').value='';document.getElementById('accPass').value='';refresh();} else alert(r.error);
+}
+function render2(stuList, userList){
+  const tb=document.getElementById('stuBody'); tb.innerHTML='';
+  stuList.forEach(s=>{
+    const acct=userList.find(u=>u.studentName===s.name);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${s.name}</td><td>${s.subjectCount}</td><td>${acct?acct.username:'<span class=muted>未关联</span>'}</td><td><button class="btn btn-sm btn-outline" onclick="rename('${encodeURIComponent(s.name)}')">改名</button> <button class="btn btn-sm btn-danger" onclick="del('${encodeURIComponent(s.name)}')">删除</button></td>`;
+    tb.appendChild(tr);
+  });
+  const ab=document.getElementById('accBody'); ab.innerHTML='';
+  userList.forEach(u=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${u.username}</td><td>${u.studentName||'<span class=muted>未关联</span>'}</td><td><button class="btn btn-sm btn-danger" onclick="delAcc('${u.username}')">删除</button></td>`;
+    ab.appendChild(tr);
+  });
+}
+function delAcc(u){if(confirm('确认删除账号 '+u+'?'))fetch('/admin/api/accounts/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u})}).then(refresh);}
+refresh();
+</script>
+</body></html>

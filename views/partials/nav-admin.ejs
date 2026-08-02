@@ -1,0 +1,19 @@
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">AP 能力评估 <span class="tag">后台</span></div>
+    <nav class="nav">
+      <a href="/admin" class="<%= active==='dashboard'?'active':'' %>">总览</a>
+      <a href="/admin/students" class="<%= active==='students'?'active':'' %>">学生管理</a>
+      <a href="/admin/scoring" class="<%= active==='scoring'?'active':'' %>">评分录入</a>
+      <a href="/admin/model" class="<%= active==='model'?'active':'' %>">模型配置</a>
+      <a href="/admin/calibration" class="<%= active==='calibration'?'active':'' %>">校准回测</a>
+      <a href="/admin/infer" class="<%= active==='infer'?'active':'' %>">能力推断</a>
+      <a href="/admin/analytics" class="<%= active==='analytics'?'active':'' %>">数据分析</a>
+      <a href="/admin/ops" class="<%= active==='ops'?'active':'' %>">数据运维</a>
+      <span class="right">
+        <span>👤 <%= user.username %></span>
+        <a href="/logout">登出</a>
+      </span>
+    </nav>
+  </div>
+</header>

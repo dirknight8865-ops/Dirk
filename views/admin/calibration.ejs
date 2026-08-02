@@ -1,0 +1,32 @@
+<%- include('../partials/head', {title:'校准回测 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'calibration'}) %>
+<div class="app">
+  <h1 style="font-size:22px;font-weight:700;margin-bottom:8px;">校准与回测</h1>
+  <p class="muted" style="margin-bottom:16px;">用已录入的真实 AP 分, 反推各能力的最优罚率权重(回归)。样本不足 5 条时无法计算, 请先在「评分录入」补全实际分。</p>
+  <div class="card">
+    <div class="form-row" style="max-width:320px;"><label>选择科目(留空=全部汇总)</label>
+      <select id="subjFilter"><option value="">全部科目</option><% courseNames.forEach(c=>{ %><option value="<%= c %>"><%= c %></option><% }) %></select>
+    </div>
+    <div id="calBox"><div class="muted">加载中...</div></div>
+  </div>
+</div>
+<script>
+const abilities = <%- JSON.stringify(abilities) %>;
+async function load(){
+  const s=document.getElementById('subjFilter').value;
+  const r=await (await fetch('/admin/api/calibration'+(s?'?subject='+encodeURIComponent(s):''))).json();
+  const box=document.getElementById('calBox');
+  if(!r.data.regression){ box.innerHTML=`<div class="alert alert-err">样本不足(当前有真实分 ${r.data.sampleCount} 条, 需 ≥5 条), 暂无法校准。</div>`; return; }
+  const reg=r.data.regression;
+  let html=`<div class="alert alert-ok">基于 ${reg.count} 条真实分回测, 平均误差 MAE = ${reg.mae.toFixed(3)} 分</div>`;
+  html+=`<table class="data"><thead><tr><th>能力</th><th>回归权重</th><th>影响度</th></tr></thead><tbody>`;
+  const total=reg.weights.reduce((a,b)=>a+b,0);
+  reg.weights.forEach((w,i)=>{ const pct=total>0?(w/total*100).toFixed(0):0; html+=`<tr><td>${abilities[i]}</td><td><strong>${w.toFixed(2)}</strong></td><td>${pct}%</td></tr>`; });
+  html+=`</tbody></table>`;
+  html+=`<p class="muted" style="margin-top:10px;">把这些权重填回「模型配置」对应科目的罚率, 即可让公式从"手调"变为"数据驱动"。</p>`;
+  box.innerHTML=html;
+}
+document.getElementById('subjFilter').onchange=load;
+load();
+</script>
+</body></html>

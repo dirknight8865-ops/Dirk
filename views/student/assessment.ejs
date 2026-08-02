@@ -1,0 +1,24 @@
+<%- include('../partials/head', {title:'我的评估 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'assessment'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">我的评估预测</h1>
+    <span style="background:var(--green,#22c55e);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
+  </div>
+  <div class="card">
+    <h2>各科预测 AP 与强弱项</h2>
+    <table class="data"><thead><tr><th>科目</th><th>预测</th><th>实际</th><th>最强项</th><th>最弱项</th></tr></thead><tbody>
+    <% data.subjects.forEach(s=>{ %>
+      <tr>
+        <td><%= s.subject %></td>
+        <td><span class="badge ps-<%= s.prediction %>"><%= s.prediction %></span></td>
+        <td><%= s.actual!=null?s.actual:'-' %></td>
+        <td><%= s.strongest?s.strongest.ability+' ('+s.strongest.value+')':'-' %></td>
+        <td><%= s.weakest?s.weakest.ability+' ('+s.weakest.value+')':'-' %></td>
+      </tr>
+    <% }) %>
+    </tbody></table>
+    <% if(data.subjects.length===0){ %><p class="muted">暂无评分数据, 请联系老师录入。</p><% } %>
+  </div>
+</div>
+</body></html>
