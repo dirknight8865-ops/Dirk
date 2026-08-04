@@ -3,16 +3,158 @@
 <div class="app">
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
     <h1 style="font-size:22px;font-weight:700;margin:0;">我的提升建议</h1>
-    <span style="background:var(--green,#22c55e);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
+    <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
   </div>
-  <% advice.forEach(a=>{ %>
-    <div class="card">
-      <h2><%= a.subject %> <% if(a.prediction){ %><span class="badge ps-<%= a.prediction %>">预测 <%= a.prediction %></span><% } %></h2>
-      <ul style="margin-left:18px;">
-        <% a.items.forEach(it=>{ %><li style="margin:4px 0;"><%= it %></li><% }) %>
-      </ul>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="form-inline" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="margin:0;">科目：</label>
+        <select id="subjSel" style="min-width:240px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;"></select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label style="margin:0;">冲刺目标 AP：</label>
+        <div id="targetBtns" style="display:flex;gap:6px;"></div>
+      </div>
     </div>
-  <% }) %>
-  <% if(advice.length===0){ %><div class="card"><p class="muted">暂无建议, 等待老师录入评分。</p></div><% } %>
+  </div>
+
+  <div id="content"></div>
 </div>
+
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const SUBJECTS = <%- JSON.stringify(subjects) %>;
+let radarChart = null, subj = null, target = null;
+
+// 渲染控件
+const subjSel = document.getElementById('subjSel');
+subjSel.innerHTML = SUBJECTS.map(s => `<option value="${s}">${s}</option>`).join('');
+const targetBtns = document.getElementById('targetBtns');
+for (let t = 1; t <= 5; t++) {
+  const b = document.createElement('button');
+  b.className = 'btn btn-sm'; b.textContent = t + '分'; b.dataset.t = t;
+  b.style.background = 'var(--border)'; b.style.color = 'var(--text2)';
+  b.onclick = () => { target = t; load(); };
+  targetBtns.appendChild(b);
+}
+subjSel.onchange = () => { subj = subjSel.value; load(); };
+
+function setActiveTarget(t) {
+  [...targetBtns.children].forEach(b => {
+    const on = (+b.dataset.t === t);
+    b.style.background = on ? 'var(--accent)' : 'var(--border)';
+    b.style.color = on ? '#fff' : 'var(--text2)';
+  });
+}
+
+function load() {
+  if (!subj) subj = subjSel.value;
+  if (!target) target = null;
+  const q = 'subject=' + encodeURIComponent(subj) + (target ? '&target=' + target : '');
+  fetch('/student/api/advice?' + q).then(r => r.json()).then(render);
+}
+
+function render(j) {
+  if (!j.ok) { document.getElementById('content').innerHTML = `<div class="card"><p class="muted">${j.error}</p></div>`; return; }
+  setActiveTarget(j.target);
+  const gap = j.gap;
+  const gapBadge = gap > 0 ? `<span class="badge" style="background:#f59e0b;color:#fff;">还差 ${gap} 分</span>`
+    : gap === 0 ? `<span class="badge good">已达目标</span>`
+    : `<span class="badge good">已超目标 +${-gap} 分</span>`;
+
+  // ① 扣分惩罚比重
+  const penaltyHtml = j.penalty.length
+    ? j.penalty.map(p => `<li><strong>${p.ability}</strong>：低于合格线(${j.threshold})时，每差 1 分扣 <strong>${p.rate}</strong> 分</li>`).join('')
+    : '<li>该科目无扣分惩罚项（各项低于合格线均不扣分）。</li>';
+
+  // ② 得分比例权重排序
+  const weightsHtml = j.weights.map((w, i) =>
+    `<li><span class="rank">${i + 1}</span> <strong>${w.ability}</strong> — 有效权重 <strong>${w.effective}</strong>
+      <span class="muted">(基础占比 ${w.base} + 扣分敏感度 ${w.penaltySensitivity})</span></li>`).join('');
+
+  // 五段提升要求表
+  const bands = j.perLevel.bands;
+  const thead = '<th>能力维度</th>' + bands.map(b => `<th>${b}</th>`).join('');
+  const tbody = j.perLevel.matrix.map((row, i) =>
+    `<tr><td>${ABILITIES[i]}</td>` + row.map(g => `<td>+${g}<br><span class="muted">分</span></td>`).join('') + `</tr>`).join('');
+
+  // 冲刺方案
+  const planRows = j.plan.plan.map(p =>
+    `<li>将「<strong>${p.ability}</strong>」从 ${p.from} 提升到 ${p.to}（对 AP 分贡献约 +${p.gain}）</li>`).join('');
+  const planHtml = j.plan.plan.length
+    ? `<ol style="margin-left:18px;">${planRows}</ol>`
+    : `<p class="muted">当前能力已满足目标，保持即可。</p>`;
+  const achieveNote = j.plan.achievable ? '' :
+    `<div class="alert alert-err" style="margin-top:10px;">⚠️ 即使六项全部达到 5 分，该科目模型预测上限为 ${j.plan.newPredicted} 分，仍无法达到目标 ${j.target}。建议调整目标分数，或关注整体能力均衡。</div>`;
+
+  document.getElementById('content').innerHTML = `
+    <div class="card" style="margin-bottom:16px;">
+      <h2>模型说明（基于评估公式）</h2>
+      <div class="grid2">
+        <div>
+          <h3>① 扣分惩罚比重</h3>
+          <p class="muted">合格线为 ${j.threshold} 分。任一能力低于合格线，会按比例扣分（权重越高，短板越致命）：</p>
+          <ul style="margin-left:18px;">${penaltyHtml}</ul>
+        </div>
+        <div>
+          <h3>② 得分比例权重（高→低）</h3>
+          <p class="muted">基础分由六维均值构成，各占 1/6；计入扣分敏感度后，有效权重排序如下：</p>
+          <ol style="margin-left:18px;padding-left:0;list-style:none;">${weightsHtml}</ol>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h2>五段提升要求（各能力从 1→2、2→3、3→4、4→5 的提分贡献）</h2>
+      <p class="muted">单元格为该能力每提升 1 级对 AP 预测分的贡献值（+0.17 来自基础均值，若低于合格线额外 +扣分减免）。
+        <span class="pill" style="background:#e0e7ff;">具体提升动作待老师按科目/分段补充</span></p>
+      <div style="overflow-x:auto;">
+        <table class="data"><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>我的冲刺方案：${j.subject} → 目标 ${j.target} 分</h2>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <span class="badge ps-${j.currentPredicted}">当前预测 ${j.currentPredicted}</span>
+        <span class="badge ps-${j.target}">目标 ${j.target}</span>
+        ${gapBadge}
+      </div>
+      <div class="grid2">
+        <div>
+          <h3>建议提升路径</h3>
+          ${planHtml}
+          ${achieveNote}
+        </div>
+        <div>
+          <h3>能力六边形对比</h3>
+          <div style="height:280px;"><canvas id="planRadar"></canvas></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 方案雷达
+  if (radarChart) radarChart.destroy();
+  radarChart = new Chart(document.getElementById('planRadar').getContext('2d'), {
+    type: 'radar',
+    data: {
+      labels: ABILITIES,
+      datasets: [
+        { label: '当前', data: j.current, borderColor: '#94a3b8', backgroundColor: 'rgba(148,163,184,0.15)', pointBackgroundColor: '#94a3b8' },
+        { label: '目标', data: j.plan.targetVector, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.18)', pointBackgroundColor: '#3b82f6' }
+      ]
+    },
+    options: { scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+if (SUBJECTS.length) load();
+else document.getElementById('content').innerHTML = `<div class="card"><p class="muted">暂无评分数据, 请联系老师录入。</p></div>`;
+</script>
+<style>
+.rank { display:inline-block; width:20px; height:20px; line-height:20px; text-align:center; background:var(--accent); color:#fff; border-radius:50%; font-size:12px; margin-right:6px; }
+ol li { margin:5px 0; }
+</style>
 </body></html>

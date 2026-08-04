@@ -36,7 +36,76 @@ function ownData(name, year) {
   return { name, year, subjects, avg };
 }
 
-router.get("/", (req, res) => res.redirect("/student/profile"));
+router.get("/", (req, res) => res.redirect("/student/dashboard"));
+
+// 仪表盘(入口): 列出该生所有考试(科目), 每个考试给出六边形能力图案
+router.get("/dashboard", (req, res) => {
+  const year = store.getActiveYear();
+  const data = ownData(req.session.user.studentName, year);
+  res.render("student/dashboard", { user: req.session.user, abilities: store.getModel().abilities, data, year, active: "dashboard" });
+});
+
+// 个人能力画像: 选择科目 -> 显示该科目六边形
+router.get("/ability", (req, res) => {
+  const year = store.getActiveYear();
+  const data = ownData(req.session.user.studentName, year);
+  res.render("student/ability", { user: req.session.user, abilities: store.getModel().abilities, data, year, active: "ability" });
+});
+
+// 提升建议所需的模型计算(全部基于 lib/model 的 predictAP)
+function planImprove(scores, fmt, target) {
+  const PR = fmt.penaltyRates, TH = fmt.threshold || 3.0;
+  const AB = model.ABILITIES;
+  const cur = scores.slice();
+  const plan = [];
+  let guard = 0;
+  while (model.predictAP(cur, fmt).final < target && guard < 40) {
+    guard++;
+    let bestI = -1, bestGain = -1;
+    for (let i = 0; i < 6; i++) {
+      if (cur[i] >= 5) continue;
+      const gain = 1 / 6 + (cur[i] < TH ? PR[i] : 0);
+      if (gain > bestGain) { bestGain = gain; bestI = i; }
+    }
+    if (bestI < 0) break;
+    plan.push({ ability: AB[bestI], from: cur[bestI], to: cur[bestI] + 1, gain: +bestGain.toFixed(3) });
+    cur[bestI] += 1;
+  }
+  return { targetVector: cur, plan, achievable: model.predictAP(cur, fmt).final >= target, newPredicted: model.predictAP(cur, fmt).final };
+}
+
+function perLevelMatrix(fmt) {
+  const AB = model.ABILITIES, PR = fmt.penaltyRates, TH = fmt.threshold || 3.0;
+  const starts = [1, 2, 3, 4]; // 1->2, 2->3, 3->4, 4->5
+  const matrix = AB.map((_, i) => starts.map(s => +(1 / 6 + (s < TH ? PR[i] : 0)).toFixed(3)));
+  return { bands: ["1→2", "2→3", "3→4", "4→5"], matrix };
+}
+
+// 提升建议计算接口(学生端交互用, 始终以 predictAP 为准)
+router.get("/api/advice", (req, res) => {
+  const name = req.session.user.studentName;
+  const year = store.getActiveYear();
+  const students = store.getStudents();
+  const formulas = store.getModel().courseFormulas;
+  const subs = students[name] || {};
+  const avail = Object.keys(subs).filter(k => k !== "cls" && subs[k][year]);
+  let subject = req.query.subject;
+  if (!subject || !subs[subject] || !subs[subject][year]) subject = avail[0];
+  if (!subject) return res.json({ ok: false, error: "暂无评分数据, 请联系老师录入。" });
+  const entry = subs[subject][year];
+  const scores = entry.s && entry.s.length === 6 ? entry.s : null;
+  const fmt = formulas[subject];
+  if (!scores || !fmt) return res.json({ ok: false, error: "数据不完整" });
+  const target = parseInt(req.query.target, 10);
+  const t = (target >= 1 && target <= 5) ? target : model.predictAP(scores, fmt).final;
+  const TH = fmt.threshold || 3.0, PR = fmt.penaltyRates;
+  const currentPredicted = model.predictAP(scores, fmt).final;
+  const penalty = model.ABILITIES.map((a, i) => ({ ability: a, rate: PR[i] })).filter(x => x.rate > 0).sort((x, y) => y.rate - x.rate);
+  const weights = model.ABILITIES.map((a, i) => ({ ability: a, base: +(1 / 6).toFixed(3), penaltySensitivity: PR[i], effective: +(1 / 6 + PR[i]).toFixed(3) })).sort((x, y) => y.effective - x.effective);
+  const perLevel = perLevelMatrix(fmt);
+  const plan = planImprove(scores, fmt, t);
+  res.json({ ok: true, subject, threshold: TH, current: scores, currentPredicted, target: t, gap: t - currentPredicted, penalty, weights, perLevel, plan });
+});
 
 router.get("/profile", (req, res) => {
   const year = store.getActiveYear();
@@ -53,20 +122,7 @@ router.get("/assessment", (req, res) => {
 router.get("/advice", (req, res) => {
   const year = store.getActiveYear();
   const data = ownData(req.session.user.studentName, year);
-  const formulas = store.getModel().courseFormulas;
-  const advice = data.subjects.map(s => {
-    if (!s.prediction) return { subject: s.subject, items: ["暂无足够评分"] };
-    const fmt = formulas[s.subject];
-    const TH = (fmt && fmt.threshold) || 3.0;
-    const items = [];
-    s.scores.forEach((v, i) => {
-      if (v < TH) items.push("提升「" + model.ABILITIES[i] + "」(" + v + "分 < 合格线" + TH + ")");
-    });
-    if (s.prediction < 5 && s.weakest) items.unshift("优先补强「" + s.weakest.ability + "」(最弱 " + s.weakest.value + "分)");
-    if (items.length === 0) items.push("各项均已达标, 保持即可");
-    return { subject: s.subject, prediction: s.prediction, items };
-  });
-  res.render("student/advice", { user: req.session.user, data, advice, year });
+  res.render("student/advice", { user: req.session.user, abilities: store.getModel().abilities, subjects: data.subjects.map(s => s.subject), year, active: "advice" });
 });
 
 router.get("/history", (req, res) => {

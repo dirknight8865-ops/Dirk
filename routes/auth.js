@@ -35,7 +35,8 @@ router.post("/student/login", (req, res) => {
 });
 
 router.get("/logout", (req, res) => {
-  req.session.destroy(() => res.redirect("/login"));
+  const role = req.session && req.session.user ? req.session.user.role : null;
+  req.session.destroy(() => res.redirect(role === "student" ? "/student/login" : "/login"));
 });
 
 module.exports = router;

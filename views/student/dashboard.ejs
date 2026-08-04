@@ -1,0 +1,71 @@
+<%- include('../partials/head', {title:'考试总览 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'dashboard'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;"><%= data.name %> 的考试总览</h1>
+    <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= data.year %></span>
+  </div>
+
+  <% if(data.subjects.length===0){ %>
+    <div class="card"><p class="muted">暂无考试/评分数据, 请联系老师录入。</p></div>
+  <% } %>
+
+  <div id="examGrid" class="exam-grid"></div>
+</div>
+
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const data = <%- JSON.stringify(data) %>;
+
+const grid = document.getElementById('examGrid');
+const charts = [];
+
+data.subjects.forEach((s, idx) => {
+  const hasScores = s.scores && s.scores.length === 6;
+  const card = document.createElement('div');
+  card.className = 'card exam-card';
+  const badges = [];
+  badges.push(s.prediction != null ? `<span class="badge ps-${s.prediction}">预测 ${s.prediction}</span>` : '');
+  badges.push(s.actual != null ? `<span class="badge ps-${s.actual}">实际 ${s.actual}</span>` : '');
+  card.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+      <h3 style="margin:0;font-size:15px;">${s.subject}</h3>
+      <div>${badges.join(' ')}</div>
+    </div>
+    <div style="height:230px;">
+      <canvas id="hex-${idx}"></canvas>
+    </div>
+    ${ hasScores ? `<div class="hex-legend">` + s.scores.map((v,i)=>`<span class="pill">${ABILITIES[i].slice(0,2)} ${v}</span>`).join('') + `</div>` : '<p class="muted">暂未评分</p>' }
+  `;
+  grid.appendChild(card);
+
+  if (hasScores) {
+    const ctx = document.getElementById('hex-' + idx).getContext('2d');
+    charts.push(new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ABILITIES,
+        datasets: [{
+          label: s.subject,
+          data: s.scores,
+          fill: true,
+          backgroundColor: 'rgba(59,130,246,0.18)',
+          borderColor: '#3b82f6',
+          pointBackgroundColor: '#3b82f6'
+        }]
+      },
+      options: { scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+    }));
+  }
+});
+
+if (data.subjects.length === 0) {
+  grid.innerHTML = '';
+}
+</script>
+<style>
+.exam-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+.exam-card { margin-bottom:0; }
+.hex-legend { margin-top:10px; display:flex; flex-wrap:wrap; }
+</style>
+</body></html>

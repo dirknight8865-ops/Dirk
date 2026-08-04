@@ -1,0 +1,87 @@
+<%- include('../partials/head', {title:'个人能力画像 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'ability'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">个人能力画像</h1>
+    <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= data.year %></span>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="form-inline" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <label style="margin:0;">选择科目：</label>
+      <select id="subjSel" style="min-width:260px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;">
+        <% data.subjects.forEach(s=>{ %>
+          <option value="<%= s.subject %>"><%= s.subject %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+
+  <div id="panel" class="card" style="display:none;">
+    <div class="grid2">
+      <div>
+        <h3 style="margin:0 0 10px;"><span id="pSubj"></span> · 能力六边形</h3>
+        <div style="height:300px;"><canvas id="radar"></canvas></div>
+      </div>
+      <div>
+        <h3 style="margin:0 0 10px;">六维明细</h3>
+        <div id="legend" style="display:flex;flex-wrap:wrap;margin-bottom:12px;"></div>
+        <table class="data">
+          <thead><tr><th>能力维度</th><th>评分(1-5)</th><th>预测/实际</th></tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <% if(data.subjects.length===0){ %>
+    <div class="card"><p class="muted">暂无评分数据, 请联系老师录入。</p></div>
+  <% } %>
+</div>
+
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const data = <%- JSON.stringify(data) %>;
+let radarChart = null;
+
+function showSubject(subject) {
+  const s = data.subjects.find(x => x.subject === subject);
+  if (!s) return;
+  document.getElementById('panel').style.display = 'block';
+  document.getElementById('pSubj').textContent = s.subject;
+
+  // 图例 + 明细表
+  const legend = document.getElementById('legend');
+  const tb = document.getElementById('tb');
+  legend.innerHTML = '';
+  tb.innerHTML = '';
+  const hasScores = s.scores && s.scores.length === 6;
+  ABILITIES.forEach((a, i) => {
+    const v = hasScores ? s.scores[i] : null;
+    const pill = document.createElement('span');
+    pill.className = 'pill';
+    pill.textContent = a + ' ' + (v != null ? v : '-');
+    legend.appendChild(pill);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${a}</td><td>${v != null ? v : '-'}</td><td>${s.prediction != null ? '预测 ' + s.prediction : '-'}${s.actual != null ? ' / 实际 ' + s.actual : ''}</td>`;
+    tb.appendChild(tr);
+  });
+
+  // 雷达
+  if (radarChart) radarChart.destroy();
+  if (hasScores) {
+    radarChart = new Chart(document.getElementById('radar').getContext('2d'), {
+      type: 'radar',
+      data: { labels: ABILITIES, datasets: [{ label: s.subject, data: s.scores, fill: true, backgroundColor: 'rgba(59,130,246,0.18)', borderColor: '#3b82f6', pointBackgroundColor: '#3b82f6' }] },
+      options: { scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+    });
+  }
+}
+
+const sel = document.getElementById('subjSel');
+if (sel) {
+  sel.addEventListener('change', e => showSubject(e.target.value));
+  showSubject(sel.value);
+}
+</script>
+</body></html>
