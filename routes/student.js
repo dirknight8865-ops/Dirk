@@ -49,7 +49,7 @@ router.get("/dashboard", (req, res) => {
 router.get("/ability", (req, res) => {
   const year = store.getActiveYear();
   const data = ownData(req.session.user.studentName, year);
-  res.render("student/ability", { user: req.session.user, abilities: store.getModel().abilities, data, year, active: "ability" });
+  res.render("student/ability", { user: req.session.user, abilities: store.getModel().abilities, criteria: model.ABILITY_CRITERIA, levelNames: model.LEVEL_NAMES, data, year, active: "ability" });
 });
 
 // 提升建议所需的模型计算(全部基于 lib/model 的 predictAP)

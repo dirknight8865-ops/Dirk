@@ -10,7 +10,7 @@ router.use(requireRole("admin"));
 function withCommon(req) {
   const m = store.getModel();
   const yi = store.getYears();
-  return { user: req.session.user, model: m, abilities: m.abilities, courseNames: Object.keys(m.courseFormulas), years: yi.years, activeYear: yi.activeYear };
+  return { user: req.session.user, model: m, abilities: m.abilities, courseNames: Object.keys(m.courseFormulas), years: yi.years, activeYear: yi.activeYear, criteria: model.ABILITY_CRITERIA, levelNames: model.LEVEL_NAMES };
 }
 
 // ── 页面 ──

@@ -29,6 +29,8 @@
 </div>
 <script>
 const abilities = <%- JSON.stringify(abilities) %>;
+const criteria = <%- JSON.stringify(criteria) %>;
+const levelNames = <%- JSON.stringify(levelNames) %>;
 const courseNames = <%- JSON.stringify(courseNames) %>;
 const YEARS = <%- JSON.stringify(years) %>;
 const ACTIVE_YEAR = <%- JSON.stringify(activeYear) %>;
@@ -45,8 +47,10 @@ function curYear(){ return document.getElementById('yearSel').value || ACTIVE_YE
 function buildSliders(){
   const box=document.getElementById('sliderBox'); box.innerHTML='';
   abilities.forEach((ab,i)=>{
-    const d=document.createElement('div'); d.className='ability-field'; d.style.marginBottom='8px';
-    d.innerHTML=`<label>${ab}</label><div class="slider-group"><input type="range" min="1" max="5" step="1" value="${current.scores[i]}" id="sl${i}" oninput="upd(${i})"><span class="slider-value" id="sv${i}">${current.scores[i]}</span></div>`;
+    const c=criteria[ab];
+    const crit=c?`<details class="crit"><summary class="crit-sum">标准 ▾</summary><div class="crit-body"><p class="crit-def">${c.def}</p>${[1,2,3,4,5].map(l=>`<div class="crit-lvl"><b>L${l} ${levelNames[l]}</b> ${c.levels[l]}</div>`).join('')}</div></details>`:'';
+    const d=document.createElement('div'); d.className='ability-field'; d.style.marginBottom='10px';
+    d.innerHTML=`<label style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">${ab}${crit}</label><div class="slider-group"><input type="range" min="1" max="5" step="1" value="${current.scores[i]}" id="sl${i}" oninput="upd(${i})"><span class="slider-value" id="sv${i}">${current.scores[i]}</span></div>`;
     box.appendChild(d);
   });
 }

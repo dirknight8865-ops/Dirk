@@ -25,6 +25,7 @@
       </div>
       <div>
         <h3 style="margin:0 0 10px;">六维明细</h3>
+        <p class="muted" style="font-size:13px;margin:0 0 8px;">等级：1 严重不足 · 2 差 · 3 合格 · 4 良好 · 5 优。点每行「标准 ▾」查看该能力各档评价准则。</p>
         <div id="legend" style="display:flex;flex-wrap:wrap;margin-bottom:12px;"></div>
         <table class="data">
           <thead><tr><th>能力维度</th><th>评分(1-5)</th><th>预测/实际</th></tr></thead>
@@ -41,6 +42,8 @@
 
 <script>
 const ABILITIES = <%- JSON.stringify(abilities) %>;
+const criteria = <%- JSON.stringify(criteria) %>;
+const levelNames = <%- JSON.stringify(levelNames) %>;
 const data = <%- JSON.stringify(data) %>;
 let radarChart = null;
 
@@ -62,8 +65,10 @@ function showSubject(subject) {
     pill.className = 'pill';
     pill.textContent = a + ' ' + (v != null ? v : '-');
     legend.appendChild(pill);
+    const c = criteria[a];
+    const critHtml = c ? `<details class="crit"><summary class="crit-sum">标准 ▾</summary><div class="crit-body"><p class="crit-def">${c.def}</p>${[1,2,3,4,5].map(l=>`<div class="crit-lvl"><b>L${l} ${levelNames[l]}</b> ${c.levels[l]}</div>`).join('')}</div></details>` : '';
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${a}</td><td>${v != null ? v : '-'}</td><td>${s.prediction != null ? '预测 ' + s.prediction : '-'}${s.actual != null ? ' / 实际 ' + s.actual : ''}</td>`;
+    tr.innerHTML = `<td>${a}${critHtml}</td><td>${v != null ? v : '-'}</td><td>${s.prediction != null ? '预测 ' + s.prediction : '-'}${s.actual != null ? ' / 实际 ' + s.actual : ''}</td>`;
     tb.appendChild(tr);
   });
 
