@@ -2,3 +2,7 @@ node_modules/
 .env
 *.log
 npm-debug.log*
+
+# 本地数据: 不入库, 防止 git pull 覆盖服务器上的真实学生数据
+data/db.json
+data/backups/
