@@ -58,10 +58,11 @@ function upd(i){ current.scores[i]=+document.getElementById('sl'+i).value; docum
 function resetSliders(){ current.scores=[3,3,3,3,3,3]; buildSliders(); }
 
 async function loadStudents(){
-  const r=await (await fetch('/admin/api/students')).json();
+  const r=await (await fetch('/admin/api/students?active=1')).json();
   const sel=document.getElementById('stuSel');
   sel.innerHTML='<option value="">请选择</option>';
-  r.data.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+  (r.data||[]).forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.name+(s.grade?'（'+s.grade+'）':'');sel.appendChild(o);});
+  return r;
 }
 document.getElementById('stuSel').onchange=loadExisting;
 document.getElementById('yearSel').onchange=()=>{ current.scores=[3,3,3,3,3,3]; buildSliders(); loadExisting(); };
@@ -72,7 +73,7 @@ async function loadExisting(){
   if(!r.ok){return;}
   r.data.rows.forEach(row=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${row.subject}</td><td><span class="badge ps-${row.prediction}">${row.prediction}</span></td><td>${row.actual!=null?row.actual:'-'}</td><td><button class="btn btn-sm btn-outline" onclick="loadOne('${encodeURIComponent(row.subject)}')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delSub('${encodeURIComponent(row.subject)}')">删</button></td>`;
+    tr.innerHTML=`<td>${row.subject}</td><td><span class="badge ps-${row.prediction}">${row.prediction}</span></td><td>${row.actual!=null?row.actual:'-'}</td><td><button class="btn btn-sm btn-outline" onclick="loadOne('${encodeURIComponent(row.subject)}')">编辑能力值</button> <button class="btn btn-sm btn-danger" onclick="delSub('${encodeURIComponent(row.subject)}')">删</button></td>`;
     tb.appendChild(tr);
   });
 }
@@ -102,6 +103,25 @@ async function delSub(subj){
   if(confirm('删除 '+subj+' ('+curYear()+')?')) fetch('/admin/api/score/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,subject:subj,year:curYear()})}).then(loadExisting);
 }
 document.getElementById('subjSel').onchange=function(){document.getElementById('subjCustom').style.display=this.value==='__custom__'?'block':'none';};
-buildSliders(); buildYearSel(); loadStudents();
+buildSliders(); buildYearSel();
+// 从 URL 预选(如从成绩报告页跳转): ?name=&subject=&year=
+  const q=new URLSearchParams(location.search);
+  const preName=q.get('name'), preSubj=q.get('subject'), preYear=q.get('year');
+  if(preYear && YEARS.includes(preYear)) document.getElementById('yearSel').value=preYear;
+  loadStudents().then(()=>{
+    if(preName){
+      const sel=document.getElementById('stuSel');
+      if([...sel.options].some(o=>o.value===preName)){
+        sel.value=preName;
+        loadExisting().then(()=>{
+          if(preSubj){
+            if(courseNames.includes(preSubj)){ document.getElementById('subjSel').value=preSubj; loadOne(preSubj); }
+            else { document.getElementById('subjSel').value='__custom__'; const c=document.getElementById('subjCustom'); c.style.display='block'; c.value=preSubj; loadOne(preSubj); }
+          }
+        });
+      }
+    }
+  });
+})();
 </script>
 </body></html>

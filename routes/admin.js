@@ -50,17 +50,27 @@ router.get("/students", (req, res) => {
     const subs = students[name];
     let subjectCount = 0;
     for (const sj in subs) { if (sj === "cls") continue; if (subs[sj][year]) subjectCount++; }
-    return { name, subjectCount, account: acct ? acct.username : null };
+    const meta = store.getStudentMeta(name);
+    return { name, subjectCount, account: acct ? acct.username : null, grade: meta.grade, graduated: meta.graduated };
   });
-  res.render("admin/students", Object.assign(withCommon(req), { rows }));
+  res.render("admin/students", Object.assign(withCommon(req), { rows, grades: store.GRADES }));
 });
 
-router.get("/scoring", (req, res) => res.render("admin/scoring", withCommon(req)));
+router.get("/scoring", (req, res) => res.render("admin/scoring", Object.assign(withCommon(req), { grades: store.GRADES })));
 router.get("/model", (req, res) => res.render("admin/model", withCommon(req)));
 router.get("/calibration", (req, res) => res.render("admin/calibration", withCommon(req)));
 router.get("/analytics", (req, res) => {
   const year = store.getActiveYear();
   res.render("admin/analytics", Object.assign(withCommon(req), { year }));
+});
+router.get("/reports", (req, res) => {
+  // 可选: 从查询串预选学生/科目
+  const students = store.getStudents();
+  const rows = Object.keys(students).map(name => {
+    const meta = store.getStudentMeta(name);
+    return { name, grade: meta.grade, graduated: meta.graduated };
+  });
+  res.render("admin/reports", Object.assign(withCommon(req), { studentRows: rows }));
 });
 router.get("/ops", (req, res) => res.render("admin/ops", withCommon(req)));
 router.get("/infer", (req, res) => res.render("admin/infer", withCommon(req)));
@@ -106,16 +116,26 @@ function computeInferred(name, year) {
 }
 
 // ── API ──
-router.get("/api/students", (req, res) => res.json({ ok: true, data: store.getStudentNames() }));
+// 全部学生(含毕业); query: all=1 默认; active=1 只要在读
+router.get("/api/students", (req, res) => {
+  const names = req.query.active === "1" ? store.getActiveStudentNames() : store.getStudentNames();
+  const data = names.map(name => {
+    const meta = store.getStudentMeta(name);
+    return { name, grade: meta.grade, graduated: meta.graduated };
+  });
+  res.json({ ok: true, data });
+});
 router.get("/api/students/detail", (req, res) => {
   const students = store.getStudents();
   const year = store.getActiveYear();
+  const onlyActive = req.query.active === "1";
   const data = Object.keys(students).map(name => {
     const subs = students[name];
     let subjectCount = 0;
     for (const sj in subs) { if (sj === "cls") continue; if (subs[sj][year]) subjectCount++; }
-    return { name, subjectCount };
-  });
+    const meta = store.getStudentMeta(name);
+    return { name, subjectCount, grade: meta.grade, graduated: meta.graduated };
+  }).filter(s => !onlyActive || !s.graduated);
   res.json({ ok: true, data });
 });
 router.get("/api/accounts", (req, res) => {
@@ -125,8 +145,10 @@ router.get("/api/accounts", (req, res) => {
 
 router.post("/api/students", (req, res) => {
   const name = (req.body.name || "").trim();
+  const grade = req.body.grade || null;
   if (!name) return res.json({ ok: false, error: "姓名不能为空" });
-  if (!store.addStudent(name)) return res.json({ ok: false, error: "已存在该学生" });
+  if (grade && !store.GRADES.includes(grade)) return res.json({ ok: false, error: "年级无效(G10-G12)" });
+  if (!store.addStudent(name, grade)) return res.json({ ok: false, error: "已存在该学生" });
   res.json({ ok: true });
 });
 
@@ -139,6 +161,18 @@ router.post("/api/students/rename", (req, res) => {
   const { oldName, newName } = req.body;
   if (!store.renameStudent(oldName, (newName || "").trim())) return res.json({ ok: false, error: "重命名失败" });
   res.json({ ok: true });
+});
+
+// 年级 / 毕业状态
+router.post("/api/students/grade", (req, res) => {
+  const { name, grade } = req.body;
+  if (!store.setStudentGrade(name, grade)) return res.json({ ok: false, error: "设置失败(学生不存在或年级无效)" });
+  res.json({ ok: true });
+});
+router.post("/api/students/graduate", (req, res) => {
+  const { name, graduated } = req.body;
+  if (!store.setStudentGraduated(name, graduated !== false)) return res.json({ ok: false, error: "设置失败" });
+  res.json({ ok: true, graduated: graduated !== false });
 });
 
 // 学生账号管理
@@ -240,6 +274,86 @@ router.get("/api/calibration", (req, res) => {
   const pts = model.buildPoints(students, req.query.subject ? { subject: req.query.subject } : {}, year);
   const reg = model.computeRegression(pts.map(p => ({ vector: p.vector, actual: p.actual, subject: p.subject })), req.query.subject || null);
   res.json({ ok: true, data: { regression: reg, sampleCount: pts.filter(p => p.actual != null).length }, year });
+});
+
+// ── 成绩报告 ──
+// 按科目+学年: 汇总该学年(可再按科目)所有学生的预估分; subject 留空 = 整个学年汇总(各科拆分)
+router.get("/api/reports/summary", (req, res) => {
+  const year = req.query.year || store.getActiveYear();
+  const subject = req.query.subject || null;
+  const includeGraduated = req.query.all === "1";
+  const students = store.getStudents();
+  const formulas = store.getModel().courseFormulas;
+  const rows = [];
+  const subjectStats = {}; // sj -> {count, predSum, actualCount, actualSum, dist}
+  const overallDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const name in students) {
+    if (!students.hasOwnProperty(name)) continue;
+    const meta = store.getStudentMeta(name);
+    if (!includeGraduated && meta.graduated) continue;
+    const subs = students[name];
+    for (const sj in subs) {
+      if (!subs.hasOwnProperty(sj) || sj === "cls") continue;
+      if (subject && sj !== subject) continue;
+      const e = subs[sj][year];
+      if (!e || !e.s || e.s.length !== 6) continue;
+      const pred = model.predictAP(e.s, formulas[sj]).final;
+      if (!subjectStats[sj]) subjectStats[sj] = { subject: sj, count: 0, predSum: 0, actualCount: 0, actualSum: 0, dist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
+      const st = subjectStats[sj];
+      st.count++; st.predSum += pred; st.dist[pred]++; overallDist[pred]++;
+      if (e.a != null) { st.actualCount++; st.actualSum += e.a; }
+      rows.push({ student: name, grade: meta.grade, graduated: meta.graduated, subject: sj, scores: e.s, prediction: pred, actual: e.a != null ? e.a : null });
+    }
+  }
+  const subjects = Object.values(subjectStats).map(st => ({
+    subject: st.subject, count: st.count,
+    avgPrediction: st.count ? +(st.predSum / st.count).toFixed(2) : null,
+    avgActual: st.actualCount ? +(st.actualSum / st.actualCount).toFixed(2) : null,
+    actualCount: st.actualCount, dist: st.dist
+  })).sort((a, b) => b.count - a.count);
+  const total = rows.length;
+  res.json({
+    ok: true, year, subject,
+    rows: subject ? rows.sort((a, b) => b.prediction - a.prediction) : rows,
+    subjects, overall: {
+      count: total,
+      avgPrediction: total ? +(rows.reduce((s, r) => s + r.prediction, 0) / total).toFixed(2) : null,
+      dist: overallDist
+    }
+  });
+});
+
+// 单个学生全景: 全部学年 × 全部科目 + 六维能力 + 推断
+router.get("/api/reports/student", (req, res) => {
+  const name = req.query.name;
+  const students = store.getStudents();
+  const subs = students[name];
+  if (!subs) return res.json({ ok: false, error: "学生不存在" });
+  const formulas = store.getModel().courseFormulas;
+  const years = store.getYears().years;
+  const meta = store.getStudentMeta(name);
+  const rows = [];
+  for (const sj of Object.keys(subs).filter(k => k !== "cls")) {
+    for (const y of years) {
+      const e = subs[sj][y];
+      if (!e) continue;
+      const pred = (e.s && e.s.length === 6) ? model.predictAP(e.s, formulas[sj]).final : null;
+      rows.push({ year: y, subject: sj, scores: e.s || [], prediction: pred, actual: e.a != null ? e.a : null });
+    }
+  }
+  rows.sort((a, b) => (a.year < b.year ? 1 : a.year > b.year ? -1 : a.subject.localeCompare(b.subject)));
+  // 六维平均(有录入的科目)
+  const vecs = rows.filter(r => r.scores.length === 6).map(r => r.scores);
+  const avgAbilities = vecs.length
+    ? [0, 1, 2, 3, 4, 5].map(i => +(vecs.reduce((s, v) => s + v[i], 0) / vecs.length).toFixed(2))
+    : null;
+  // 各学年推断结果
+  const inferredByYear = {};
+  for (const y of years) {
+    const inf = store.getInferred(name, y);
+    if (inf) inferredByYear[y] = { abilities: inf.abilities, rmse: inf.rmse, n: inf.n, reliable: inf.reliable };
+  }
+  res.json({ ok: true, name, grade: meta.grade, graduated: meta.graduated, years, rows, avgAbilities, inferredByYear });
 });
 
 // 导出 / 导入

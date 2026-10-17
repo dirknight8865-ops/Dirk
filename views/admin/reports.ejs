@@ -1,0 +1,202 @@
+<%- include('../partials/head', {title:'成绩报告 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: 'reports'}) %>
+<div class="app">
+  <h1 style="font-size:22px;font-weight:700;margin-bottom:16px;">成绩报告</h1>
+  <div id="msg"></div>
+  <div class="card">
+    <h2>查询条件</h2>
+    <div class="form-inline" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+      <div class="form-row" style="margin:0;flex:1;min-width:150px;"><label>查询模式</label>
+        <select id="modeSel">
+          <option value="summary">按科目 + 学年</option>
+          <option value="year">按学年整体汇总</option>
+          <option value="student">单个学生全景</option>
+        </select>
+      </div>
+      <div class="form-row" id="yearRow" style="margin:0;flex:1;min-width:150px;"><label>学年</label>
+        <select id="yearSel"></select>
+      </div>
+      <div class="form-row" id="subjRow" style="margin:0;flex:1;min-width:180px;"><label>科目</label>
+        <select id="subjSel"><option value="">全部科目</option></select>
+      </div>
+      <div class="form-row" id="stuRow" style="margin:0;flex:1;min-width:150px;display:none;"><label>学生</label>
+        <select id="stuSel"></select>
+      </div>
+      <label id="allRow" style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text2);cursor:pointer;padding-bottom:6px;">
+        <input type="checkbox" id="inclGrad"> 含毕业学生
+      </label>
+      <button class="btn btn-sm" onclick="load()">查询</button>
+    </div>
+  </div>
+
+  <!-- 模式一/二: 科目/学年汇总 -->
+  <div id="summaryPanel" style="display:none;">
+    <div class="row">
+      <div class="col card">
+        <h2 id="rankTitle">预估分排名</h2>
+        <div class="table-wrap"><table class="data"><thead id="rankHead"></thead><tbody id="rankBody"></tbody></table></div>
+      </div>
+      <div class="col card">
+        <h2>预估分分布</h2>
+        <div class="chart-box"><canvas id="distChart"></canvas></div>
+        <div id="overallBox" style="margin-top:10px;"></div>
+      </div>
+    </div>
+    <div class="card" id="bySubjectCard">
+      <h2>各科汇总（<span id="bySubjectYear"></span>）</h2>
+      <div class="table-wrap"><table class="data"><thead><tr><th>科目</th><th>人数</th><th>平均预估</th><th>平均实际</th><th>实际分数</th><th>分布(1-5)</th></tr></thead><tbody id="subjectBody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- 模式三: 单个学生 -->
+  <div id="studentPanel" style="display:none;">
+    <div class="row">
+      <div class="col card">
+        <h2 id="stuTitle">学生全景</h2>
+        <div id="stuMetaBox"></div>
+        <div class="table-wrap"><table class="data"><thead><tr><th>学年</th><th>科目</th><th>六维能力值</th><th>预估</th><th>实际</th><th>操作</th></tr></thead><tbody id="stuRowsBody"></tbody></table></div>
+      </div>
+      <div class="col card">
+        <h2>六维能力画像（全学年均值）</h2>
+        <div class="chart-box"><canvas id="stuRadar"></canvas></div>
+        <div id="inferredBox" style="margin-top:10px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const COURSE_NAMES = <%- JSON.stringify(courseNames) %>;
+const YEARS = <%- JSON.stringify(years) %>;
+const ACTIVE_YEAR = <%- JSON.stringify(activeYear) %>;
+const STUDENT_ROWS = <%- JSON.stringify(studentRows) %>;
+const LEVEL_NAMES = <%- JSON.stringify(levelNames) %>;
+const CRITERIA = <%- JSON.stringify(criteria) %>;
+let distChart=null, radarChart=null;
+
+(function init(){
+  const ys=document.getElementById('yearSel');
+  YEARS.forEach(y=>{const o=document.createElement('option');o.value=y;o.textContent=y+(y===ACTIVE_YEAR?'（当前）':'');ys.appendChild(o);});
+  ys.value=ACTIVE_YEAR;
+  const ss=document.getElementById('subjSel');
+  COURSE_NAMES.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;ss.appendChild(o);});
+  const ts=document.getElementById('stuSel');
+  STUDENT_ROWS.slice().sort((a,b)=>(a.graduated-b.graduated)||(a.name<b.name?-1:1)).forEach(s=>{
+    const o=document.createElement('option');o.value=s.name;
+    o.textContent=s.name+(s.grade?'（'+s.grade+'）':'')+(s.graduated?' · 已毕业':'');
+    ts.appendChild(o);
+  });
+  document.getElementById('modeSel').onchange=toggleMode;
+  toggleMode();
+})();
+
+function toggleMode(){
+  const m=document.getElementById('modeSel').value;
+  document.getElementById('subjRow').style.display = m==='student'?'none':'';
+  document.getElementById('stuRow').style.display  = m==='student'?'':'none';
+  document.getElementById('allRow').style.display  = m==='student'?'none':'';
+  document.getElementById('yearRow').style.display = m==='student'?'none':'';
+}
+
+function badge(p){ return `<span class="badge ps-${p}">${p}</span>`; }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function load(){
+  const m=document.getElementById('modeSel').value;
+  if(m==='student') return loadStudent();
+  const year=document.getElementById('yearSel').value;
+  const subject=document.getElementById('subjSel').value||null;
+  const all=document.getElementById('inclGrad').checked?'1':'';
+  const q=new URLSearchParams({year, ...(subject?{subject}:{}), ...(all?{all}:{})});
+  const r=await (await fetch('/admin/api/reports/summary?'+q)).json();
+  if(!r.ok) return alert(r.error||'查询失败');
+  document.getElementById('studentPanel').style.display='none';
+  document.getElementById('summaryPanel').style.display='';
+  // 排名表
+  const isYearMode = m==='year';
+  document.getElementById('rankTitle').textContent = subject ? `${subject} · ${year} 预估分排名` : `${year} 全学年预估分`;
+  document.getElementById('rankHead').innerHTML = subject
+    ? '<tr><th>学生</th><th>年级</th><th>预估</th><th>实际</th></tr>'
+    : '<tr><th>学生</th><th>科目</th><th>年级</th><th>预估</th><th>实际</th></tr>';
+  const tb=document.getElementById('rankBody'); tb.innerHTML='';
+  const rows=r.rows.slice().sort((a,b)=>b.prediction-a.prediction);
+  rows.forEach(x=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = subject
+      ? `<td>${esc(x.student)}${x.graduated?' <span class="muted">(毕业)</span>':''}</td><td>${x.grade||'-'}</td><td>${badge(x.prediction)}</td><td>${x.actual!=null?x.actual:'-'}</td>`
+      : `<td>${esc(x.student)}${x.graduated?' <span class="muted">(毕业)</span>':''}</td><td>${esc(x.subject)}</td><td>${x.grade||'-'}</td><td>${badge(x.prediction)}</td><td>${x.actual!=null?x.actual:'-'}</td>`;
+    tb.appendChild(tr);
+  });
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="5" class="muted">该条件下暂无记录</td></tr>'; }
+  // 分布图
+  const d=r.overall.dist;
+  if(distChart) distChart.destroy();
+  distChart=new Chart(document.getElementById('distChart'),{type:'bar',
+    data:{labels:['1分','2分','3分','4分','5分'],datasets:[{label:'记录数',data:[d[1]||0,d[2]||0,d[3]||0,d[4]||0,d[5]||0],backgroundColor:['#ef4444','#f97316','#f59e0b','#3b82f6','#22c55e']}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+  document.getElementById('overallBox').innerHTML=`<p class="muted">共 ${r.overall.count} 条 · 平均预估 ${r.overall.avgPrediction==null?'—':r.overall.avgPrediction} 分</p>`;
+  // 各科汇总(仅未指定科目时展示)
+  const sb=document.getElementById('subjectBody');
+  document.getElementById('bySubjectCard').style.display = subject?'none':'';
+  document.getElementById('bySubjectYear').textContent=year;
+  sb.innerHTML='';
+  r.subjects.forEach(s=>{
+    const distTxt=[1,2,3,4,5].map(l=>`${l}分:${s.dist[l]||0}`).join(' · ');
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(s.subject)}</td><td>${s.count}</td><td>${s.avgPrediction==null?'—':s.avgPrediction}</td><td>${s.avgActual==null?'—':s.avgActual}</td><td>${s.actualCount}/${s.count}</td><td class="muted" style="font-size:12px;">${distTxt}</td>`;
+    sb.appendChild(tr);
+  });
+  if(!r.subjects.length) sb.innerHTML='<tr><td colspan="6" class="muted">暂无数据</td></tr>';
+}
+
+async function loadStudent(){
+  const name=document.getElementById('stuSel').value;
+  if(!name) return alert('请选择学生');
+  const r=await (await fetch('/admin/api/reports/student?name='+encodeURIComponent(name))).json();
+  if(!r.ok) return alert(r.error||'查询失败');
+  document.getElementById('summaryPanel').style.display='none';
+  document.getElementById('studentPanel').style.display='';
+  document.getElementById('stuTitle').textContent = r.name + ' 全景';
+  document.getElementById('stuMetaBox').innerHTML = `
+    <p style="margin:0 0 10px;">${r.grade?`年级 <b>${r.grade}</b> · `:''}
+    ${r.graduated?'<span class="badge bad">已毕业</span>':'<span class="badge good">在读</span>'}
+    <span class="muted" style="font-size:12px;margin-left:6px;">覆盖学年: ${r.years.join(' / ')}</span></p>`;
+  const tb=document.getElementById('stuRowsBody'); tb.innerHTML='';
+  r.rows.forEach(x=>{
+    const crit = CRITERIA ? '' : '';
+    const scoresTxt = x.scores.length===6
+      ? ABILITIES.map((a,i)=>{ const lv=x.scores[i];
+        const cname=LEVEL_NAMES&&LEVEL_NAMES[lv]?LEVEL_NAMES[lv]:'';
+        return `<span class="pill" title="${esc(a)}: ${esc(cname)}">${a.slice(0,2)} ${lv}</span>`; }).join(' ')
+      : '<span class="muted">无</span>';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(x.year)}</td><td>${esc(x.subject)}</td><td>${scoresTxt}</td><td>${x.prediction!=null?badge(x.prediction):'-'}</td><td>${x.actual!=null?x.actual:'-'}</td>
+      <td><button class="btn btn-sm btn-outline" onclick="goScoring('${encodeURIComponent(name)}','${encodeURIComponent(x.subject)}','${encodeURIComponent(x.year)}')">编辑能力值</button></td>`;
+    tb.appendChild(tr);
+  });
+  if(!r.rows.length) tb.innerHTML='<tr><td colspan="6" class="muted">该生暂无任何评分记录</td></tr>';
+  // 雷达
+  const ctx=document.getElementById('stuRadar');
+  if(radarChart) radarChart.destroy();
+  if(r.avgAbilities){
+    radarChart=new Chart(ctx,{type:'radar',data:{labels:ABILITIES,datasets:[{label:r.name+'（全学年均值）',data:r.avgAbilities,fill:true,backgroundColor:'rgba(59,130,246,.2)',borderColor:'#3b82f6',pointBackgroundColor:'#3b82f6'}]},options:{scales:{r:{min:1,max:5,ticks:{stepSize:1}}}}});
+  } else {
+    radarChart=new Chart(ctx,{type:'radar',data:{labels:ABILITIES,datasets:[{label:'暂无数据',data:[0,0,0,0,0,0]}]},options:{scales:{r:{min:0,max:5}}}});
+  }
+  // 各学年推断
+  const ib=document.getElementById('inferredBox');
+  const yrs=Object.keys(r.inferredByYear||{});
+  if(yrs.length){
+    ib.innerHTML='<h3 style="margin-bottom:6px;">各学年推断六维</h3>'+yrs.map(y=>{
+      const v=r.inferredByYear[y];
+      return `<p style="margin:4px 0;font-size:13px;"><b>${y}</b>: ${v.abilities.join(' / ')} <span class="muted">(RMSE ${v.rmse==null?'—':v.rmse} · ${v.n} 科实际分)</span></p>`;
+    }).join('');
+  } else ib.innerHTML='';
+}
+
+function goScoring(name, subj, year){
+  location.href='/admin/scoring?name='+name+'&subject='+subj+'&year='+year;
+}
+load();
+</script>
+</body></html>

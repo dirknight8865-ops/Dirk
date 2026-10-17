@@ -7,10 +7,22 @@
     <div class="col card">
       <h2>学生档案</h2>
       <div class="form-row"><label>新增学生姓名</label><input id="newName" placeholder="输入姓名"></div>
+      <div class="form-row"><label>年级</label>
+        <select id="newGrade">
+          <option value="">不设置</option>
+          <% grades.forEach(g=>{ %><option value="<%= g %>"><%= g %></option><% }) %>
+        </select>
+      </div>
       <button class="btn btn-sm" onclick="addStudent()">添加学生</button>
       <h3>学生列表</h3>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <label style="display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text2);cursor:pointer;">
+          <input type="checkbox" id="showGrad" onchange="render2()"> 显示已毕业学生
+        </label>
+        <span id="stuCount" class="muted" style="font-size:12px;"></span>
+      </div>
       <table class="data">
-        <thead><tr><th>姓名</th><th>科目数</th><th>关联账号</th><th>操作</th></tr></thead>
+        <thead><tr><th>姓名</th><th>年级</th><th>状态</th><th>科目数</th><th>关联账号</th><th>操作</th></tr></thead>
         <tbody id="stuBody"></tbody>
       </table>
     </div>
@@ -31,31 +43,62 @@
   </div>
 </div>
 <script>
-const rows = <%- JSON.stringify(rows) %>;
-function render(){
+let stuList = [], userList = [];
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function render2(){
+  const showGrad = document.getElementById('showGrad').checked;
   const tb=document.getElementById('stuBody'); tb.innerHTML='';
-  rows.forEach(r=>{
+  const list = stuList.filter(s=>showGrad || !s.graduated);
+  document.getElementById('stuCount').textContent = `在读 ${stuList.filter(s=>!s.graduated).length} 人 · 毕业 ${stuList.filter(s=>s.graduated).length} 人`;
+  list.forEach(s=>{
+    const acct=userList.find(u=>u.studentName===s.name);
+    const gradeSel = `<select onchange="setGrade('${encodeURIComponent(s.name)}', this.value)">
+      <option value="">未设置</option>
+      ${['G10','G11','G12'].map(g=>`<option value="${g}" ${s.grade===g?'selected':''}>${g}</option>`).join('')}
+    </select>`;
+    const statusBadge = s.graduated ? '<span class="badge bad">已毕业</span>' : '<span class="badge good">在读</span>';
+    const gradBtn = s.graduated
+      ? `<button class="btn btn-sm btn-outline" onclick="setGrad('${encodeURIComponent(s.name)}', false)">恢复在读</button>`
+      : `<button class="btn btn-sm btn-outline" onclick="setGrad('${encodeURIComponent(s.name)}', true)">设为毕业</button>`;
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${r.name}</td><td>${r.subjectCount}</td><td>${r.account||'<span class=muted>未关联</span>'}</td><td><button class="btn btn-sm btn-outline" onclick="rename('${encodeURIComponent(r.name)}')">改名</button> <button class="btn btn-sm btn-danger" onclick="del('${encodeURIComponent(r.name)}')">删除</button></td>`;
+    if (s.graduated) tr.style.opacity = 0.55;
+    tr.innerHTML=`<td>${esc(s.name)}</td><td>${gradeSel}</td><td>${statusBadge}</td><td>${s.subjectCount}</td><td>${acct?esc(acct.username):'<span class=muted>未关联</span>'}</td>
+      <td>${gradBtn} <button class="btn btn-sm btn-outline" onclick="rename('${encodeURIComponent(s.name)}')">改名</button> <button class="btn btn-sm btn-danger" onclick="del('${encodeURIComponent(s.name)}')">删除</button></td>`;
     tb.appendChild(tr);
   });
   const ab=document.getElementById('accBody'); ab.innerHTML='';
-  // 账号来自后端重新拉取
+  userList.forEach(u=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(u.username)}</td><td>${u.studentName?esc(u.studentName):'<span class=muted>未关联</span>'}</td><td><button class="btn btn-sm btn-danger" onclick="delAcc('${encodeURIComponent(u.username)}')">删除</button></td>`;
+    ab.appendChild(tr);
+  });
 }
 async function refresh(){
-  const r=await (await fetch('/admin/api/students')).json();
-  // 重新拉账号
-  const users=await (await fetch('/admin/api/accounts')).json();
-  rows.length=0; r.data.forEach(n=>rows.push({name:n,subjectCount:0,account:null}));
-  // 合并科目数 & 账号
   const stuRes=await (await fetch('/admin/api/students/detail')).json();
-  render2(stuRes.data||[], users.data||[]);
+  const users=await (await fetch('/admin/api/accounts')).json();
+  stuList = stuRes.data||[]; userList = users.data||[];
+  render2();
 }
 async function addStudent(){
   const name=document.getElementById('newName').value.trim();
+  const grade=document.getElementById('newGrade').value;
   if(!name) return;
-  const r=await (await fetch('/admin/api/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})).json();
+  const r=await (await fetch('/admin/api/students',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,grade:grade||null})})).json();
   if(r.ok){document.getElementById('newName').value='';refresh();} else alert(r.error);
+}
+async function setGrade(n,g){
+  n=decodeURIComponent(n);
+  if(!g) return refresh();
+  const r=await (await fetch('/admin/api/students/grade',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,grade:g})})).json();
+  if(!r.ok) alert(r.error);
+  refresh();
+}
+async function setGrad(n,flag){
+  n=decodeURIComponent(n);
+  if(!confirm(flag?`确认将 ${n} 设为毕业? 毕业后不再出现在评分录入中。`:`确认恢复 ${n} 为在读?`)) return;
+  const r=await (await fetch('/admin/api/students/graduate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,graduated:flag})})).json();
+  if(!r.ok) alert(r.error);
+  refresh();
 }
 function rename(n){const nn=prompt('新姓名',decodeURIComponent(n));if(nn)fetch('/admin/api/students/rename',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({oldName:decodeURIComponent(n),newName:nn})}).then(refresh);}
 function del(n){if(confirm('确认删除该学生及其所有评分?'))fetch('/admin/api/students/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:decodeURIComponent(n)})}).then(refresh);}
@@ -67,22 +110,7 @@ async function addAccount(){
   const r=await (await fetch('/admin/api/accounts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password,studentName})})).json();
   if(r.ok){document.getElementById('accUser').value='';document.getElementById('accPass').value='';refresh();} else alert(r.error);
 }
-function render2(stuList, userList){
-  const tb=document.getElementById('stuBody'); tb.innerHTML='';
-  stuList.forEach(s=>{
-    const acct=userList.find(u=>u.studentName===s.name);
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${s.name}</td><td>${s.subjectCount}</td><td>${acct?acct.username:'<span class=muted>未关联</span>'}</td><td><button class="btn btn-sm btn-outline" onclick="rename('${encodeURIComponent(s.name)}')">改名</button> <button class="btn btn-sm btn-danger" onclick="del('${encodeURIComponent(s.name)}')">删除</button></td>`;
-    tb.appendChild(tr);
-  });
-  const ab=document.getElementById('accBody'); ab.innerHTML='';
-  userList.forEach(u=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${u.username}</td><td>${u.studentName||'<span class=muted>未关联</span>'}</td><td><button class="btn btn-sm btn-danger" onclick="delAcc('${u.username}')">删除</button></td>`;
-    ab.appendChild(tr);
-  });
-}
-function delAcc(u){if(confirm('确认删除账号 '+u+'?'))fetch('/admin/api/accounts/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u})}).then(refresh);}
+function delAcc(u){if(confirm('确认删除账号 '+u+'?'))fetch('/admin/api/accounts/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:decodeURIComponent(u)})}).then(refresh);}
 refresh();
 </script>
 </body></html>
