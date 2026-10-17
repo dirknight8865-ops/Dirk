@@ -107,6 +107,67 @@ router.get("/api/advice", (req, res) => {
   res.json({ ok: true, subject, threshold: TH, current: scores, currentPredicted, target: t, gap: t - currentPredicted, penalty, weights, perLevel, plan });
 });
 
+// ============================================================
+// 提升路径(学生端主界面): 学年选择 → 能力讲解 → 综合要求 → 提升先后排序
+// ============================================================
+router.get("/plan", (req, res) => {
+  const name = req.session.user.studentName;
+  const abilities = store.getModel().abilities;
+  const formulas = store.getModel().courseFormulas;
+  const guide = require("../lib/ability-guide");
+  const criteria = model.ABILITY_CRITERIA;
+  const levelNames = model.LEVEL_NAMES;
+  const subs = store.getStudents()[name] || {};
+
+  // 该生有数据的学年列表(保持 db.years 顺序)
+  const allYears = store.getYears().years;
+  const availYears = allYears.filter(y => Object.keys(subs).some(k => k !== "cls" && subs[k][y]));
+  let year = req.query.year;
+  if (!availYears.includes(year)) year = availYears.includes(store.getActiveYear()) ? store.getActiveYear() : availYears[0];
+
+  // 该学年各科目数据
+  const subjects = Object.keys(subs).filter(k => k !== "cls" && subs[k][year]).map(sj => {
+    const entry = subs[sj][year];
+    const scores = entry && entry.s && entry.s.length === 6 ? entry.s : null;
+    const fmt = formulas[sj];
+    const pred = (scores && fmt) ? model.predictAP(scores, fmt).final : null;
+    return { subject: sj, scores, actual: entry && entry.a != null ? entry.a : null, prediction: pred, fmt };
+  }).sort((a, b) => a.subject.localeCompare(b.subject));
+
+  // 六维均分(仅有完整评分的科目计入)
+  const withScores = subjects.filter(s => s.scores);
+  const avg = abilities.map((_, i) => {
+    const vals = withScores.map(s => s.scores[i]).filter(v => typeof v === "number");
+    return vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : null;
+  });
+
+  // 提升先后排序: 低于合格线(3)的优先; 同组按提分贡献降序, 再按均分升序
+  // 贡献 = 各科平均 (1/6 + 低于该科合格线时加扣分敏感度), 与 predictAP 口径一致
+  const order = abilities.map((a, i) => {
+    const gains = withScores.map(s => 1 / 6 + ((s.scores[i] < (s.fmt.threshold || 3)) ? (s.fmt.penaltyRates[i] || 0) : 0));
+    return {
+      ability: a, index: i, avg: avg[i],
+      gain: gains.length ? +(gains.reduce((x, y) => x + y, 0) / gains.length).toFixed(3) : 0,
+      deficient: avg[i] != null && avg[i] < 3
+    };
+  }).filter(x => x.avg != null).sort((x, y) => {
+    if (x.deficient !== y.deficient) return x.deficient ? -1 : 1;
+    if (y.gain !== x.gain) return y.gain - x.gain;
+    return x.avg - y.avg;
+  });
+
+  const validAvg = avg.filter(v => v != null);
+  const overallAvg = validAvg.length ? +(validAvg.reduce((a, b) => a + b, 0) / validAvg.length).toFixed(2) : null;
+  const strongest = order.length ? order[order.length - 1] : null;
+  const weakest = order.find(x => x.deficient) || (order.length ? order[0] : null);
+
+  res.render("student/plan", {
+    user: req.session.user, abilities, criteria, levelNames, guide,
+    subjects, avg, order, overallAvg, strongest, weakest,
+    years: availYears, year, activeYear: store.getActiveYear(), active: "plan"
+  });
+});
+
 router.get("/profile", (req, res) => {
   const year = store.getActiveYear();
   const data = ownData(req.session.user.studentName, year);

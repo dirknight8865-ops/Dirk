@@ -1,0 +1,192 @@
+<%- include('../partials/head', {title:'我的提升路径 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'plan'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">我的提升路径</h1>
+    <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
+  </div>
+
+  <% if(!subjects.length){ %>
+    <div class="card"><p class="muted">该学年暂无评分数据，请联系老师录入，或切换其他学年。</p></div>
+  <% } else { %>
+
+  <!-- 学年选择 -->
+  <div class="card" style="margin-bottom:16px;padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <label style="margin:0;">选择学年：</label>
+      <select id="yearSel" style="width:auto;min-width:180px;">
+        <% years.forEach(y=>{ %>
+          <option value="<%= y %>" <%= y===year?'selected':'' %>><%= y %><%= y===activeYear?'（当前学年）':'' %></option>
+        <% }) %>
+      </select>
+      <span class="muted">切换学年可查看对应学年的能力讲解与提升排序</span>
+    </div>
+  </div>
+
+  <!-- ① 本学年能力总览 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2>① 本学年能力总览</h2>
+    <div class="grid2">
+      <div>
+        <h3 style="margin:0 0 10px;">六维能力雷达（<%= year %>）</h3>
+        <% const hasAvg = avg.some(v=>v!=null); %>
+        <% if(hasAvg){ %>
+          <div style="height:300px;"><canvas id="avgRadar"></canvas></div>
+        <% } else { %>
+          <p class="muted">暂无评分数据</p>
+        <% } %>
+      </div>
+      <div>
+        <h3 style="margin:0 0 10px;">六维明细（各科平均）</h3>
+        <table class="data">
+          <thead><tr><th>能力维度</th><th>均分(1-5)</th><th>等级</th><th>状态</th></tr></thead>
+          <tbody>
+            <% abilities.forEach((a,i)=>{ const v=avg[i]; %>
+              <tr>
+                <td><%= a %></td>
+                <td><span class="badge ps-<%= v!=null?Math.round(v):0 %>"><%= v!=null?v:'-' %></span></td>
+                <td><%= v!=null?levelNames[Math.round(v)]:'-' %></td>
+                <td><%= v!=null&&v<3?'<span class="badge" style="background:var(--red);">低于合格线</span>':'<span class="badge" style="background:var(--green);">达标</span>' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <p class="muted" style="margin-top:8px;">均分为该学年各科目评分平均；合格线为 3 分。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 能力讲解 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2>② 各项能力讲解</h2>
+    <p class="muted" style="margin-bottom:12px;">每项能力包含：你当前所处的档位描述、为什么这项能力重要、以及 1–5 分的完整评价标准。</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;">
+      <% abilities.forEach((a,i)=>{ const v=avg[i]; const lv=v!=null?Math.round(v):null; const c=criteria[a]; const w=guide.why[a]||''; %>
+        <div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:#fff;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <strong style="font-size:14px;"><%= a %></strong>
+            <span class="badge ps-<%= lv||0 %>"><%= v!=null?v:'-' %></span>
+            <span class="muted"><%= lv?levelNames[lv]:'暂无评分' %></span>
+            <% if(v!=null&&v<3){ %><span class="badge" style="background:var(--red);">低于合格线</span><% } %>
+          </div>
+          <% if(lv&&c&&c.levels[lv]){ %>
+            <p style="font-size:13px;line-height:1.55;margin:0 0 8px;color:var(--text);"><b>你当前的档位（<%= lv %> 分）：</b><%= c.levels[lv] %></p>
+          <% } %>
+          <p style="font-size:13px;line-height:1.55;margin:0 0 8px;color:var(--text);"><b>为什么重要：</b><%= w %></p>
+          <% if(c){ %>
+            <details class="crit">
+              <summary class="crit-sum">查看 1–5 分完整标准 ▾</summary>
+              <div class="crit-body">
+                <p class="crit-def"><%= c.def %></p>
+                <% [1,2,3,4,5].forEach(l=>{ %>
+                  <div class="crit-lvl" <%= l===lv?'style="background:#eff6ff;border-radius:4px;padding:2px 4px;"':'' %>><b>L<%= l %> <%= levelNames[l] %></b> <%= c.levels[l] %></div>
+                <% }) %>
+              </div>
+            </details>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- ③ 综合要求 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2>③ 本学年综合要求</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;">
+      <div class="stat"><div class="n"><%= overallAvg!=null?overallAvg:'-' %></div><div class="l">六维均分</div></div>
+      <div class="stat"><div class="n" style="font-size:18px;line-height:34px;"><%= strongest?strongest.ability:'-' %></div><div class="l">最强项（<%= strongest&&strongest.avg!=null?strongest.avg:'-' %>）</div></div>
+      <div class="stat"><div class="n" style="font-size:18px;line-height:34px;color:var(--red);"><%= weakest?weakest.ability:'-' %></div><div class="l">最需补强（<%= weakest&&weakest.avg!=null?weakest.avg:'-' %>）</div></div>
+      <div class="stat"><div class="n"><%= order.filter(x=>x.deficient).length %></div><div class="l">低于合格线项数</div></div>
+      <div class="stat"><div class="n"><%= subjects.filter(s=>s.prediction!=null).length %></div><div class="l">有预测科目数</div></div>
+    </div>
+    <h3>各科预测分（<%= year %>）</h3>
+    <table class="data">
+      <thead><tr><th>科目</th><th>预测 AP</th><th>实际</th><th>六维评分</th></tr></thead>
+      <tbody>
+        <% subjects.forEach(s=>{ %>
+          <tr>
+            <td><%= s.subject %></td>
+            <td><span class="badge ps-<%= s.prediction!=null?s.prediction:0 %>"><%= s.prediction!=null?s.prediction:'-' %></span></td>
+            <td><%= s.actual!=null?s.actual:'-' %></td>
+            <td style="text-align:left;"><%= s.scores?s.scores.map((v,i)=>'<span class="pill">'+abilities[i].slice(0,2)+' '+v+'</span>').join(''):'<span class="muted">暂未评分</span>' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <div class="alert" style="background:#f8fafc;border:1px solid var(--border);color:var(--text);margin-top:12px;">
+      <b>综合要求总述：</b><span id="summaryText"><%= guide.summary %></span>
+      <span class="pill" style="background:#fef3c7;color:#92400e;">内容待老师完善</span>
+    </div>
+  </div>
+
+  <!-- ④ 提升先后排序 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2>④ 提升先后排序</h2>
+    <p class="muted" style="margin-bottom:12px;">基于评估模型计算：低于合格线（3 分）的能力优先补强（可消除扣分惩罚）；同组内按对 AP 预测分的贡献从高到低排序。请从第 1 名开始，依次推进。</p>
+    <ol id="planOrder" style="list-style:none;padding:0;margin:0;"></ol>
+    <div class="alert" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e;margin-top:12px;">
+      每项后面的「具体提升动作」为占位内容，老师会按你的情况补充个性化建议。
+    </div>
+  </div>
+
+  <% } %><!-- /subjects.length -->
+</div>
+
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const AVG = <%- JSON.stringify(avg) %>;
+const ORDER = <%- JSON.stringify(order) %>;
+const LEVEL_NAMES = <%- JSON.stringify(levelNames) %>;
+const GUIDE_HOW = <%- JSON.stringify(guide.how) %>;
+const HAS_AVG = AVG.some(v => v != null);
+
+// 学年切换
+const yearSel = document.getElementById('yearSel');
+if (yearSel) yearSel.onchange = () => { location.href = '/student/plan?year=' + encodeURIComponent(yearSel.value); };
+
+// 雷达图
+if (HAS_AVG) {
+  new Chart(document.getElementById('avgRadar').getContext('2d'), {
+    type: 'radar',
+    data: {
+      labels: ABILITIES,
+      datasets: [{ label: '六维均分', data: AVG, fill: true, backgroundColor: 'rgba(59,130,246,0.18)', borderColor: '#3b82f6', pointBackgroundColor: '#3b82f6' }]
+    },
+    options: { scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+  });
+}
+
+// ④ 提升先后排序渲染
+(function () {
+  const ol = document.getElementById('planOrder');
+  if (!ol || !ORDER.length) return;
+  const lvName = v => LEVEL_NAMES[Math.round(v)];
+  ORDER.forEach((x, idx) => {
+    const rank = idx + 1;
+    const li = document.createElement('li');
+    const isFirst = rank === 1;
+    const isLast = rank === ORDER.length;
+    li.style.cssText = 'display:flex;gap:12px;align-items:flex-start;padding:12px 14px;margin-bottom:10px;border:1px solid var(--border);border-radius:10px;background:' + (isFirst ? '#eff6ff' : '#fff') + ';' + (isFirst ? 'border-color:#93c5fd;' : '');
+    let reason;
+    if (isFirst && x.deficient) reason = '首先提升：低于合格线，每提升 1 级对 AP 预测分平均贡献约 +' + x.gain + '，并可消除扣分惩罚，效率最高。';
+    else if (isFirst) reason = '首先提升：当前各项中提分效率最高，每提升 1 级对 AP 预测分平均贡献约 +' + x.gain + '。';
+    else if (x.deficient) reason = '低于合格线，需补强：每提升 1 级平均贡献约 +' + x.gain + '。';
+    else if (isLast) reason = '保持优势：该项已达标且贡献较低，维持现有水平即可。';
+    else reason = '按贡献依次推进：每提升 1 级平均贡献约 +' + x.gain + '。';
+    li.innerHTML =
+      '<span style="flex:none;width:28px;height:28px;line-height:28px;text-align:center;border-radius:50%;font-size:13px;font-weight:700;color:#fff;background:' + (isFirst ? 'var(--accent)' : (x.deficient ? 'var(--red)' : '#94a3b8')) + ';">' + rank + '</span>' +
+      '<div style="flex:1;min-width:0;">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">' +
+          '<strong style="font-size:14px;">' + x.ability + '</strong>' +
+          '<span class="badge ps-' + Math.round(x.avg) + '">' + x.avg + ' 分 · ' + lvName(x.avg) + '</span>' +
+          (isFirst ? '<span class="badge" style="background:var(--accent);">首先提升</span>' : '') +
+          (x.deficient && !isFirst ? '<span class="badge" style="background:var(--red);">低于合格线</span>' : '') +
+        '</div>' +
+        '<p style="font-size:13px;line-height:1.55;margin:0 0 4px;color:var(--text);">' + reason + '</p>' +
+        '<p style="font-size:13px;line-height:1.55;margin:0;color:var(--text2);"><b>具体提升动作：</b>' + (GUIDE_HOW[x.ability] || '【待补充】') + '</p>' +
+      '</div>';
+    ol.appendChild(li);
+  });
+})();
+</script>
+</body></html>
