@@ -105,6 +105,7 @@ async function delSub(subj){
 document.getElementById('subjSel').onchange=function(){document.getElementById('subjCustom').style.display=this.value==='__custom__'?'block':'none';};
 buildSliders(); buildYearSel();
 // 从 URL 预选(如从成绩报告页跳转): ?name=&subject=&year=
+(function(){
   const q=new URLSearchParams(location.search);
   const preName=q.get('name'), preSubj=q.get('subject'), preYear=q.get('year');
   if(preYear && YEARS.includes(preYear)) document.getElementById('yearSel').value=preYear;
