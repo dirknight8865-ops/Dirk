@@ -40,9 +40,15 @@ router.get("/", (req, res) => res.redirect("/student/dashboard"));
 
 // 仪表盘(入口): 列出该生所有考试(科目), 每个考试给出六边形能力图案
 router.get("/dashboard", (req, res) => {
-  const year = store.getActiveYear();
-  const data = ownData(req.session.user.studentName, year);
-  res.render("student/dashboard", { user: req.session.user, abilities: store.getModel().abilities, data, year, active: "dashboard" });
+  const name = req.session.user.studentName;
+  const subs = store.getStudents()[name] || {};
+  // 该生有数据的学年列表(支持 ?year= 切换, 无效值回退)
+  const allYears = store.getYears().years;
+  const availYears = allYears.filter(y => Object.keys(subs).some(k => k !== "cls" && subs[k][y]));
+  let year = req.query.year;
+  if (!availYears.includes(year)) year = availYears.includes(store.getActiveYear()) ? store.getActiveYear() : availYears[0];
+  const data = ownData(name, year);
+  res.render("student/dashboard", { user: req.session.user, abilities: store.getModel().abilities, data, year, years: availYears, activeYear: store.getActiveYear(), active: "dashboard" });
 });
 
 // 个人能力画像: 选择科目 -> 显示该科目六边形
