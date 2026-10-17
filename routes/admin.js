@@ -72,6 +72,13 @@ router.get("/reports", (req, res) => {
   });
   res.render("admin/reports", Object.assign(withCommon(req), { studentRows: rows }));
 });
+// 单科能力分布明细(从成绩报告点预估分进入)
+router.get("/ability-dist", (req, res) => {
+  const name = req.query.name || "";
+  const subject = req.query.subject || "";
+  const year = req.query.year || store.getActiveYear();
+  res.render("admin/ability-dist", Object.assign(withCommon(req), { name, subject, year }));
+});
 router.get("/ops", (req, res) => res.render("admin/ops", withCommon(req)));
 router.get("/infer", (req, res) => res.render("admin/infer", withCommon(req)));
 
@@ -354,6 +361,57 @@ router.get("/api/reports/student", (req, res) => {
     if (inf) inferredByYear[y] = { abilities: inf.abilities, rmse: inf.rmse, n: inf.n, reliable: inf.reliable };
   }
   res.json({ ok: true, name, grade: meta.grade, graduated: meta.graduated, years, rows, avgAbilities, inferredByYear });
+});
+
+// 单科能力分布明细(成绩报告点分数进入): 该生该科六维 + 预测分解 + 全班对照
+router.get("/api/reports/ability-dist", (req, res) => {
+  const name = req.query.name, subject = req.query.subject;
+  const year = req.query.year || store.getActiveYear();
+  const students = store.getStudents();
+  const subs = students[name];
+  if (!subs || !subs[subject] || !subs[subject][year] || !subs[subject][year].s)
+    return res.json({ ok: false, error: "该学生该学年该科目暂无评分记录" });
+  const e = subs[subject][year];
+  const scores = e.s.slice(0, 6);
+  const formulas = store.getModel().courseFormulas;
+  const fmt = formulas[subject] || null;
+  const meta = store.getStudentMeta(name);
+  // 预测分解: 均分(base) + 最高分加成(boost) + 偏移(offset) - 低于阈值扣分(penalty)
+  let prediction = null;
+  if (fmt) {
+    const p = model.predictAP(scores, fmt);
+    const TH = fmt.threshold || 3.0;
+    const perAbility = model.ABILITIES.map((ab, i) => {
+      const below = scores[i] < TH;
+      return {
+        ability: ab, value: scores[i], below,
+        shortfall: below ? +(TH - scores[i]).toFixed(2) : 0,
+        rate: fmt.penaltyRates[i] || 0,
+        contribution: below ? +((TH - scores[i]) * (fmt.penaltyRates[i] || 0)).toFixed(3) : 0
+      };
+    });
+    prediction = { base: +p.base.toFixed(3), boost: +p.boost.toFixed(3), offset: p.offset, penalty: +p.penalty.toFixed(3), final: p.final, threshold: TH, perAbility };
+  }
+  // 全班该科该学年: 均分向量 + 每能力分数分布
+  const vecs = [];
+  for (const n in students) {
+    if (!students.hasOwnProperty(n)) continue;
+    const s2 = students[n][subject];
+    if (s2 && s2[year] && s2[year].s && s2[year].s.length === 6) vecs.push(s2[year].s);
+  }
+  const classAvg = vecs.length
+    ? [0, 1, 2, 3, 4, 5].map(i => +(vecs.reduce((s, v) => s + v[i], 0) / vecs.length).toFixed(2))
+    : null;
+  const classDist = model.ABILITIES.map((_, i) => {
+    const d = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    vecs.forEach(v => { d[v[i]] = (d[v[i]] || 0) + 1; });
+    return d;
+  });
+  res.json({
+    ok: true, name, subject, year, grade: meta.grade, graduated: meta.graduated,
+    scores, actual: e.a != null ? e.a : null, formula: fmt, prediction,
+    classCount: vecs.length, classAvg, classDist
+  });
 });
 
 // 导出 / 导入

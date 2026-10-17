@@ -100,6 +100,11 @@ function toggleMode(){
 
 function badge(p){ return `<span class="badge ps-${p}">${p}</span>`; }
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// 预估分 -> 点击进入该生该科能力分布明细
+function distLink(name, subject, prediction, year){
+  const href='/admin/ability-dist?name='+encodeURIComponent(name)+'&subject='+encodeURIComponent(subject)+'&year='+encodeURIComponent(year);
+  return `<a href="${href}" title="点击查看 ${esc(name)} 在 ${esc(subject)} 的能力分布"><span class="badge ps-${prediction}">${prediction}</span></a>`;
+}
 
 async function load(){
   const m=document.getElementById('modeSel').value;
@@ -123,8 +128,8 @@ async function load(){
   rows.forEach(x=>{
     const tr=document.createElement('tr');
     tr.innerHTML = subject
-      ? `<td>${esc(x.student)}${x.graduated?' <span class="muted">(毕业)</span>':''}</td><td>${x.grade||'-'}</td><td>${badge(x.prediction)}</td><td>${x.actual!=null?x.actual:'-'}</td>`
-      : `<td>${esc(x.student)}${x.graduated?' <span class="muted">(毕业)</span>':''}</td><td>${esc(x.subject)}</td><td>${x.grade||'-'}</td><td>${badge(x.prediction)}</td><td>${x.actual!=null?x.actual:'-'}</td>`;
+      ? `<td>${esc(x.student)}${x.graduated?' <span class="muted">(毕业)</span>':''}</td><td>${x.grade||'-'}</td><td>${distLink(x.student, x.subject, x.prediction, r.year)}</td><td>${x.actual!=null?x.actual:'-'}</td>`
+      : `<td>${esc(x.student)}${x.graduated?' <span class="muted">(毕业)</span>':''}</td><td>${esc(x.subject)}</td><td>${x.grade||'-'}</td><td>${distLink(x.student, x.subject, x.prediction, r.year)}</td><td>${x.actual!=null?x.actual:'-'}</td>`;
     tb.appendChild(tr);
   });
   if(!rows.length){ tb.innerHTML='<tr><td colspan="5" class="muted">该条件下暂无记录</td></tr>'; }
@@ -170,7 +175,7 @@ async function loadStudent(){
         return `<span class="pill" title="${esc(a)}: ${esc(cname)}">${a.slice(0,2)} ${lv}</span>`; }).join(' ')
       : '<span class="muted">无</span>';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${esc(x.year)}</td><td>${esc(x.subject)}</td><td>${scoresTxt}</td><td>${x.prediction!=null?badge(x.prediction):'-'}</td><td>${x.actual!=null?x.actual:'-'}</td>
+    tr.innerHTML=`<td>${esc(x.year)}</td><td>${esc(x.subject)}</td><td>${scoresTxt}</td><td>${x.prediction!=null?distLink(name, x.subject, x.prediction, x.year):'-'}</td><td>${x.actual!=null?x.actual:'-'}</td>
       <td><button class="btn btn-sm btn-outline" onclick="goScoring('${encodeURIComponent(name)}','${encodeURIComponent(x.subject)}','${encodeURIComponent(x.year)}')">编辑能力值</button></td>`;
     tb.appendChild(tr);
   });

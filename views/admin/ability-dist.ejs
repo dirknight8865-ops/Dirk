@@ -1,0 +1,143 @@
+<%- include('../partials/head', {title:'能力分布明细 · 后台'}) %>
+<%- include('../partials/nav-admin', {user: user, active: ''}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">能力分布明细</h1>
+    <a href="/admin/reports" class="btn btn-sm btn-outline">← 返回成绩报告</a>
+  </div>
+  <div id="msg"></div>
+  <div id="headBox" class="card"></div>
+  <div id="emptyBox" class="card" style="display:none;"></div>
+  <div id="mainBox" style="display:none;">
+    <div class="row">
+      <div class="col card">
+        <h2>六维能力：该生 vs 全班均分</h2>
+        <div class="chart-box"><canvas id="radar"></canvas></div>
+      </div>
+      <div class="col card">
+        <h2>每项能力值对比（该生 / 全班均分）</h2>
+        <div class="chart-box"><canvas id="bar"></canvas></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col card">
+        <h2>预测分是怎么算出来的</h2>
+        <div id="predBreak"></div>
+      </div>
+      <div class="col card">
+        <h2>全班分数分布（<span id="classCountTxt"></span>）</h2>
+        <div id="classDistBox"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>每项能力明细</h2>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>能力</th><th>该生分值</th><th>等级</th><th>全班均分</th><th>低于阈值?</th><th>扣分贡献</th><th>评分标准</th></tr></thead>
+        <tbody id="abBody"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const CRITERIA = <%- JSON.stringify(criteria) %>;
+const LEVEL_NAMES = <%- JSON.stringify(levelNames) %>;
+const Q_NAME = <%- JSON.stringify(name) %>;
+const Q_SUBJECT = <%- JSON.stringify(subject) %>;
+const Q_YEAR = <%- JSON.stringify(year) %>;
+let radarChart = null, barChart = null;
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function badge(p){ return `<span class="badge ps-${p}">${p}</span>`; }
+
+async function load(){
+  const q = new URLSearchParams({ name: Q_NAME, subject: Q_SUBJECT, year: Q_YEAR });
+  const r = await (await fetch('/admin/api/reports/ability-dist?' + q)).json();
+  if (!r.ok) {
+    document.getElementById('emptyBox').style.display = '';
+    document.getElementById('emptyBox').innerHTML = `<p class="muted">${esc(r.error || '加载失败')}</p>
+      <p><a href="/admin/reports" class="btn btn-sm">返回成绩报告</a></p>`;
+    return;
+  }
+  document.getElementById('mainBox').style.display = '';
+  const pred = r.prediction;
+  // 头部
+  document.getElementById('headBox').innerHTML = `
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;">
+      <div><div style="font-size:12px;color:var(--text2);">学生</div><div style="font-size:18px;font-weight:700;">${esc(r.name)}${r.grade?` · ${r.grade}`:''}${r.graduated?' <span class="badge bad">已毕业</span>':' <span class="badge good">在读</span>'}</div></div>
+      <div><div style="font-size:12px;color:var(--text2);">科目</div><div style="font-size:16px;font-weight:600;">${esc(r.subject)}</div></div>
+      <div><div style="font-size:12px;color:var(--text2);">学年</div><div style="font-size:16px;font-weight:600;">${esc(r.year)}</div></div>
+      <div><div style="font-size:12px;color:var(--text2);">预估分</div><div>${pred?badge(pred.final):'<span class="muted">无公式</span>'}</div></div>
+      <div><div style="font-size:12px;color:var(--text2);">实际分</div><div style="font-size:16px;font-weight:600;">${r.actual!=null?r.actual:'-'}</div></div>
+      <div style="flex:1;"></div>
+      <a class="btn btn-sm btn-outline" href="/admin/scoring?name=${encodeURIComponent(r.name)}&subject=${encodeURIComponent(r.subject)}&year=${encodeURIComponent(r.year)}">编辑能力值</a>
+    </div>`;
+  // 雷达
+  const hasClass = r.classAvg && r.classCount > 0;
+  const datasets = [{ label: r.name, data: r.scores, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,.18)', pointBackgroundColor:'#3b82f6' }];
+  if (hasClass) datasets.push({ label: '全班均分', data: r.classAvg, borderColor:'#94a3b8', backgroundColor:'rgba(148,163,184,.12)', pointBackgroundColor:'#94a3b8' });
+  if (radarChart) radarChart.destroy();
+  radarChart = new Chart(document.getElementById('radar'), {
+    type:'radar', data:{ labels:ABILITIES, datasets },
+    options:{ scales:{ r:{ min:1, max:5, ticks:{ stepSize:1 } } }, plugins:{ legend:{ position:'bottom' } } }
+  });
+  // 条形对比
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('bar'), {
+    type:'bar',
+    data:{ labels:ABILITIES.map(a=>a.slice(0,2)), datasets:[
+      { label:r.name, data:r.scores, backgroundColor:'#3b82f6' },
+      ...(hasClass?[{ label:'全班均分', data:r.classAvg, backgroundColor:'#cbd5e1' }]:[])
+    ]},
+    options:{ scales:{ y:{ min:1, max:5, ticks:{ stepSize:1 } } }, plugins:{ legend:{ position:'bottom' } } }
+  });
+  // 预测分解
+  const pb = document.getElementById('predBreak');
+  if (pred) {
+    const rows = [
+      ['基础分 base = 六维均值', pred.base],
+      ['最高分加成 boost', '+' + pred.boost],
+      ['科目偏移 offset', (pred.offset>=0?'+':'') + pred.offset],
+      ['低于阈值扣分 penalty', '-' + pred.penalty],
+      ['<b>最终预估分 final</b>', '<b>' + pred.final + '</b>']
+    ];
+    pb.innerHTML = `<div class="table-wrap"><table class="data"><tbody>` +
+      rows.map(x=>`<tr><td>${x[0]}</td><td style="text-align:right;">${x[1]}</td></tr>`).join('') +
+      `</tbody></table></div>
+      <p class="muted" style="font-size:12px;margin-top:8px;">规则: final = round(base + boost + offset - penalty), 截断到 1-5。
+      阈值 TH=${pred.threshold}: 能力分低于 TH 的每一项, 每低 1 分按 penaltyRates 加权扣分。</p>`;
+  } else {
+    pb.innerHTML = '<p class="muted">该科目未配置预测公式, 无法分解。</p>';
+  }
+  // 全班分布
+  const cb = document.getElementById('classDistBox');
+  document.getElementById('classCountTxt').textContent = (r.classCount||0) + ' 人';
+  if (r.classDist) {
+    cb.innerHTML = r.classDist.map((d,i)=>`<div style="margin-bottom:10px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:2px;">${esc(ABILITIES[i])}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">${[1,2,3,4,5].map(l=>
+        `<span class="pill" style="background:${['#fee2e2','#ffedd5','#fef9c3','#dbeafe','#dcfce7'][l-1]};">${l}分 × ${d[l]||0}</span>`).join('')}
+      </div></div>`).join('');
+  } else cb.innerHTML = '<p class="muted">暂无全班数据</p>';
+  // 每能力明细表
+  const tb = document.getElementById('abBody'); tb.innerHTML = '';
+  const TH = pred ? pred.threshold : 3;
+  r.scores.forEach((v,i)=>{
+    const c = CRITERIA[ABILITIES[i]];
+    const crit = c ? `<details class="crit"><summary class="crit-sum">标准 ▾</summary><div class="crit-body"><p class="crit-def">${esc(c.def)}</p>${[1,2,3,4,5].map(l=>`<div class="crit-lvl"><b>L${l} ${LEVEL_NAMES[l]}</b> ${esc(c.levels[l])}</div>`).join('')}</div></details>` : '<span class="muted">-</span>';
+    const below = v < TH;
+    const contrib = (pred && pred.perAbility[i]) ? pred.perAbility[i].contribution : 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(ABILITIES[i])}</td>
+      <td><b>${v}</b></td>
+      <td>${LEVEL_NAMES[v]||'-'}</td>
+      <td>${hasClass ? r.classAvg[i] : '-'}</td>
+      <td>${below ? '<span class="badge bad">低于 ' + TH + '</span>' : '<span class="badge good">达标</span>'}</td>
+      <td>${contrib>0 ? '-' + contrib : '0'}</td>
+      <td>${crit}</td>`;
+    tb.appendChild(tr);
+  });
+}
+load();
+</script>
+</body></html>
