@@ -1,0 +1,23 @@
+<%# 学年选择组件：多学年=可切换下拉；单学年=静态徽章+提示。参数：years, year, activeYear, base, hint(可选) %>
+<div class="card" style="margin-bottom:16px;padding:14px 20px;">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <label style="margin:0;font-weight:600;">学年：</label>
+    <% if(years && years.length > 1){ %>
+      <select id="yearSel" style="width:auto;min-width:180px;">
+        <% years.forEach(y=>{ %>
+          <option value="<%= y %>" <%= y===year?'selected':'' %>><%= y %><%= y===activeYear?'（当前学年）':'' %></option>
+        <% }) %>
+      </select>
+      <span class="muted"><%= hint || '切换学年可查看对应学年的数据' %></span>
+    <% } else { %>
+      <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;"><%= year %><%= year===activeYear?'（当前学年）':'' %></span>
+      <span class="muted">你目前只有这一个学年的评分数据，暂无法切换</span>
+    <% } %>
+  </div>
+</div>
+<script>
+(function () {
+  var ys = document.getElementById('yearSel');
+  if (ys) ys.onchange = function () { location.href = '<%= base %>?year=' + encodeURIComponent(ys.value); };
+})();
+</script>

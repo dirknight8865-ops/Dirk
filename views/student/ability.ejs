@@ -6,6 +6,8 @@
     <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= data.year %></span>
   </div>
 
+  <%- include('../partials/year-picker', {years, year, activeYear, base: '/student/ability', hint: '切换学年可查看该学年各科目的能力画像'}) %>
+
   <div class="card" style="margin-bottom:16px;">
     <div class="form-inline" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
       <label style="margin:0;">选择科目：</label>

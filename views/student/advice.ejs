@@ -6,6 +6,8 @@
     <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
   </div>
 
+  <%- include('../partials/year-picker', {years, year, activeYear, base: '/student/advice', hint: '切换学年可查看该学年的提升建议'}) %>
+
   <div class="card" style="margin-bottom:16px;">
     <div class="form-inline" style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
       <div style="display:flex;align-items:center;gap:8px;">
@@ -25,6 +27,7 @@
 <script>
 const ABILITIES = <%- JSON.stringify(abilities) %>;
 const SUBJECTS = <%- JSON.stringify(subjects) %>;
+const CURRENT_YEAR = <%- JSON.stringify(year) %>;
 let radarChart = null, subj = null, target = null;
 
 // 渲染控件
@@ -51,7 +54,7 @@ function setActiveTarget(t) {
 function load() {
   if (!subj) subj = subjSel.value;
   if (!target) target = null;
-  const q = 'subject=' + encodeURIComponent(subj) + (target ? '&target=' + target : '');
+  const q = 'year=' + encodeURIComponent(CURRENT_YEAR) + '&subject=' + encodeURIComponent(subj) + (target ? '&target=' + target : '');
   fetch('/student/api/advice?' + q).then(r => r.json()).then(render);
 }
 

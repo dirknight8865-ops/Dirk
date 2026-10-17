@@ -38,24 +38,31 @@ function ownData(name, year) {
 
 router.get("/", (req, res) => res.redirect("/student/dashboard"));
 
-// 仪表盘(入口): 列出该生所有考试(科目), 每个考试给出六边形能力图案
-router.get("/dashboard", (req, res) => {
-  const name = req.session.user.studentName;
+// 解析学生端学年参数: 返回该生有数据的学年列表与当前学年(?year= 无效时回退到当前学年或首个有数据学年)
+function resolveStudentYear(req, name) {
   const subs = store.getStudents()[name] || {};
-  // 该生有数据的学年列表(支持 ?year= 切换, 无效值回退)
   const allYears = store.getYears().years;
   const availYears = allYears.filter(y => Object.keys(subs).some(k => k !== "cls" && subs[k][y]));
   let year = req.query.year;
   if (!availYears.includes(year)) year = availYears.includes(store.getActiveYear()) ? store.getActiveYear() : availYears[0];
+  return { availYears, year };
+}
+
+// 仪表盘(入口): 列出该生所有考试(科目), 每个考试给出六边形能力图案
+router.get("/dashboard", (req, res) => {
+  const name = req.session.user.studentName;
+  // 该生有数据的学年列表(支持 ?year= 切换, 无效值回退)
+  const { availYears, year } = resolveStudentYear(req, name);
   const data = ownData(name, year);
   res.render("student/dashboard", { user: req.session.user, abilities: store.getModel().abilities, data, year, years: availYears, activeYear: store.getActiveYear(), active: "dashboard" });
 });
 
 // 个人能力画像: 选择科目 -> 显示该科目六边形
 router.get("/ability", (req, res) => {
-  const year = store.getActiveYear();
-  const data = ownData(req.session.user.studentName, year);
-  res.render("student/ability", { user: req.session.user, abilities: store.getModel().abilities, criteria: model.ABILITY_CRITERIA, levelNames: model.LEVEL_NAMES, data, year, active: "ability" });
+  const name = req.session.user.studentName;
+  const { availYears, year } = resolveStudentYear(req, name);
+  const data = ownData(name, year);
+  res.render("student/ability", { user: req.session.user, abilities: store.getModel().abilities, criteria: model.ABILITY_CRITERIA, levelNames: model.LEVEL_NAMES, data, year, years: availYears, activeYear: store.getActiveYear(), active: "ability" });
 });
 
 // 提升建议所需的模型计算(全部基于 lib/model 的 predictAP)
@@ -90,7 +97,7 @@ function perLevelMatrix(fmt) {
 // 提升建议计算接口(学生端交互用, 始终以 predictAP 为准)
 router.get("/api/advice", (req, res) => {
   const name = req.session.user.studentName;
-  const year = store.getActiveYear();
+  const year = resolveStudentYear(req, name).year;
   const students = store.getStudents();
   const formulas = store.getModel().courseFormulas;
   const subs = students[name] || {};
@@ -125,11 +132,8 @@ router.get("/plan", (req, res) => {
   const levelNames = model.LEVEL_NAMES;
   const subs = store.getStudents()[name] || {};
 
-  // 该生有数据的学年列表(保持 db.years 顺序)
-  const allYears = store.getYears().years;
-  const availYears = allYears.filter(y => Object.keys(subs).some(k => k !== "cls" && subs[k][y]));
-  let year = req.query.year;
-  if (!availYears.includes(year)) year = availYears.includes(store.getActiveYear()) ? store.getActiveYear() : availYears[0];
+  // 该生有数据的学年列表(支持 ?year= 切换, 无效值回退)
+  const { availYears, year } = resolveStudentYear(req, name);
 
   // 该学年各科目数据
   const subjects = Object.keys(subs).filter(k => k !== "cls" && subs[k][year]).map(sj => {
@@ -175,21 +179,24 @@ router.get("/plan", (req, res) => {
 });
 
 router.get("/profile", (req, res) => {
-  const year = store.getActiveYear();
-  const data = ownData(req.session.user.studentName, year);
-  res.render("student/profile", { user: req.session.user, abilities: store.getModel().abilities, data, year });
+  const name = req.session.user.studentName;
+  const { availYears, year } = resolveStudentYear(req, name);
+  const data = ownData(name, year);
+  res.render("student/profile", { user: req.session.user, abilities: store.getModel().abilities, data, year, years: availYears, activeYear: store.getActiveYear(), active: "profile" });
 });
 
 router.get("/assessment", (req, res) => {
-  const year = store.getActiveYear();
-  const data = ownData(req.session.user.studentName, year);
-  res.render("student/assessment", { user: req.session.user, abilities: store.getModel().abilities, data, year });
+  const name = req.session.user.studentName;
+  const { availYears, year } = resolveStudentYear(req, name);
+  const data = ownData(name, year);
+  res.render("student/assessment", { user: req.session.user, abilities: store.getModel().abilities, data, year, years: availYears, activeYear: store.getActiveYear(), active: "assessment" });
 });
 
 router.get("/advice", (req, res) => {
-  const year = store.getActiveYear();
-  const data = ownData(req.session.user.studentName, year);
-  res.render("student/advice", { user: req.session.user, abilities: store.getModel().abilities, subjects: data.subjects.map(s => s.subject), year, active: "advice" });
+  const name = req.session.user.studentName;
+  const { availYears, year } = resolveStudentYear(req, name);
+  const data = ownData(name, year);
+  res.render("student/advice", { user: req.session.user, abilities: store.getModel().abilities, subjects: data.subjects.map(s => s.subject), year, years: availYears, activeYear: store.getActiveYear(), active: "advice" });
 });
 
 router.get("/history", (req, res) => {
@@ -198,17 +205,23 @@ router.get("/history", (req, res) => {
   const years = store.getYears().years;
   const subs = students[req.session.user.studentName] || {};
   const rows = [];
+  const availYears = [];
   for (const sj of Object.keys(subs).filter(k => k !== "cls")) {
     for (const y of years) {
       const e = subs[sj][y];
       if (e && e.a != null) {
         const pred = (e.s && e.s.length === 6) ? model.predictAP(e.s, formulas[sj]).final : null;
         rows.push({ year: y, subject: sj, actual: e.a, prediction: pred, scores: e.s || [] });
+        if (!availYears.includes(y)) availYears.push(y);
       }
     }
   }
   rows.sort((a, b) => (b.year < a.year ? -1 : b.year > a.year ? 1 : 0));
-  res.render("student/history", { user: req.session.user, history: rows });
+  // 学年筛选: ?year=all 或缺省显示全部; 指定学年只显示该学年
+  let year = req.query.year;
+  if (year !== "all" && !availYears.includes(year)) year = "all";
+  const shown = year === "all" ? rows : rows.filter(r => r.year === year);
+  res.render("student/history", { user: req.session.user, history: shown, years: availYears, year, active: "history" });
 });
 
 module.exports = router;

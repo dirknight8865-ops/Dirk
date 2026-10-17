@@ -5,6 +5,8 @@
     <h1 style="font-size:22px;font-weight:700;margin:0;"><%= data.name %> 的能力画像</h1>
     <span style="background:var(--green,#22c55e);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= data.year %></span>
   </div>
+
+  <%- include('../partials/year-picker', {years, year, activeYear, base: '/student/profile', hint: '切换学年可查看该学年的综合画像'}) %>
   <div class="row">
     <div class="col card">
       <h2>综合能力雷达(各科平均)</h2>

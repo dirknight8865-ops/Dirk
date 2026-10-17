@@ -5,6 +5,8 @@
     <h1 style="font-size:22px;font-weight:700;margin:0;">我的评估预测</h1>
     <span style="background:var(--green,#22c55e);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
   </div>
+
+  <%- include('../partials/year-picker', {years, year, activeYear, base: '/student/assessment', hint: '切换学年可查看该学年各科预测与强弱项'}) %>
   <div class="card">
     <h2>各科预测 AP 与强弱项</h2>
     <table class="data"><thead><tr><th>科目</th><th>预测</th><th>实际</th><th>最强项</th><th>最弱项</th></tr></thead><tbody>
