@@ -13,13 +13,18 @@
   <!-- 学年选择 -->
   <div class="card" style="margin-bottom:16px;padding:14px 20px;">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <label style="margin:0;">选择学年：</label>
-      <select id="yearSel" style="width:auto;min-width:180px;">
-        <% years.forEach(y=>{ %>
-          <option value="<%= y %>" <%= y===year?'selected':'' %>><%= y %><%= y===activeYear?'（当前学年）':'' %></option>
-        <% }) %>
-      </select>
-      <span class="muted">切换学年可查看对应学年的能力讲解与提升排序</span>
+      <label style="margin:0;font-weight:600;">学年：</label>
+      <% if(years.length > 1){ %>
+        <select id="yearSel" style="width:auto;min-width:180px;">
+          <% years.forEach(y=>{ %>
+            <option value="<%= y %>" <%= y===year?'selected':'' %>><%= y %><%= y===activeYear?'（当前学年）':'' %></option>
+          <% }) %>
+        </select>
+        <span class="muted">切换学年可查看对应学年的能力讲解与提升排序</span>
+      <% } else { %>
+        <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;"><%= year %><%= year===activeYear?'（当前学年）':'' %></span>
+        <span class="muted">你目前只有这一个学年的评分数据，暂无法切换</span>
+      <% } %>
     </div>
   </div>
 
