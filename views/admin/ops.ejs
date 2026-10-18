@@ -29,10 +29,17 @@
     </div>
     <div id="yearList"></div>
   </div>
+  <div class="card" style="margin-top:16px;">
+    <h2>学年数据重置（进入新学年时使用）</h2>
+    <p class="muted">进入新学年时，可把上一学年的评分记录整体归档：归档后该学年数据从录入、报告、学生端等所有视图消失，新学年从零开始、互不干扰；归档数据仍完整保留在数据库中，随时可一键恢复。<b>此操作仅在后台触发，学生端无感。</b></p>
+    <div id="yearResetList"></div>
+  </div>
 </div>
 <script>
 const YEARS = <%- JSON.stringify(years) %>;
 const ACTIVE_YEAR = <%- JSON.stringify(activeYear) %>;
+const YEAR_STATS = <%- JSON.stringify(yearStats) %>;
+const ARCHIVED_YEARS = <%- JSON.stringify(archivedYears) %>;
 document.getElementById('dbpath').textContent='data/db.json (JSON 文件存储, 零依赖)';
 function renderYears(){
   const box=document.getElementById('yearList');
@@ -54,6 +61,44 @@ async function setActive(y){
   else alert(r.error);
 }
 renderYears();
+// ── 学年数据重置 ──
+function renderYearReset(){
+  const box=document.getElementById('yearResetList');
+  const rows=YEARS.map(y=>{
+    const st=YEAR_STATS[y]||{students:0,entries:0,archived:ARCHIVED_YEARS.includes(y)};
+    const isActive=y===ACTIVE_YEAR;
+    const archived=st.archived;
+    const badge=isActive?'<span class="badge good">当前学年</span>':(archived?'<span class="badge" style="background:#6b7280;color:#fff;">已归档</span>':'<span class="badge">在役</span>');
+    let ops='';
+    if(archived){
+      ops='<button class="btn btn-sm btn-outline" onclick="restoreYear(\''+y+'\')">恢复数据</button> <button class="btn btn-sm btn-danger" onclick="delYear(\''+y+'\')">彻底删除</button>';
+    }else if(isActive){
+      ops='<span class="muted" style="font-size:12px;">当前学年不可归档，请先新建并切换到新学年</span>';
+    }else{
+      ops='<button class="btn btn-sm" onclick="archiveYear(\''+y+'\')">归档该学年</button> <button class="btn btn-sm btn-danger" onclick="delYear(\''+y+'\')">彻底删除</button>';
+    }
+    return `<tr><td>${y}</td><td>${badge}</td><td>${st.students} 人 / ${st.entries} 条记录</td><td>${ops}</td></tr>`;
+  }).join('');
+  box.innerHTML='<table class="data"><thead><tr><th>学年</th><th>状态</th><th>数据量</th><th>操作</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<p class="muted" style="font-size:12px;margin-top:8px;">归档 = 数据移入归档区（所有视图不可见，可恢复）；彻底删除 = 数据永久消失且不可恢复（删除前系统仍会自动留存最近 30 份时间戳备份，可从上方「导入」恢复）。</p>';
+}
+async function archiveYear(y){
+  if(!confirm('归档 '+y+' 学年？\n\n该学年全部评分记录将移入归档区，从录入/报告/学生端等所有视图消失；学生端不会显示任何异常。\n之后可随时点「恢复数据」找回。'))return;
+  const r=await (await fetch('/admin/api/years/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({year:y})})).json();
+  if(r.ok){document.getElementById('msg').innerHTML='<div class="alert alert-ok">已归档 '+y+'（'+r.moved+' 条记录），新学年可从零录入</div>';location.reload();} else alert(r.error);
+}
+async function restoreYear(y){
+  if(!confirm('恢复 '+y+' 学年归档数据？\n\n该学年的评分记录将重新出现在所有视图中。'))return;
+  const r=await (await fetch('/admin/api/years/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({year:y})})).json();
+  if(r.ok){document.getElementById('msg').innerHTML='<div class="alert alert-ok">已恢复 '+y+'（'+r.moved+' 条记录）</div>';location.reload();} else alert(r.error);
+}
+async function delYear(y){
+  if(!confirm('⚠️ 彻底删除 '+y+' 学年全部数据（含归档）？\n\n此操作不可撤销！建议先「下载备份 JSON」。'))return;
+  if(!confirm('再次确认：删除后该学年数据只能从历史备份文件恢复。确定删除？'))return;
+  const r=await (await fetch('/admin/api/years/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({year:y})})).json();
+  if(r.ok){document.getElementById('msg').innerHTML='<div class="alert alert-ok">已彻底删除 '+y+'（'+r.moved+' 条记录）</div>';location.reload();} else alert(r.error);
+}
+renderYearReset();
 async function doImport(){
   const f=document.getElementById('impFile').files[0]; if(!f)return alert('请选择文件');
   const text=await f.text(); let obj; try{obj=JSON.parse(text);}catch(e){return alert('JSON 解析失败');}

@@ -79,7 +79,113 @@ router.get("/ability-dist", (req, res) => {
   const year = req.query.year || store.getActiveYear();
   res.render("admin/ability-dist", Object.assign(withCommon(req), { name, subject, year }));
 });
-router.get("/ops", (req, res) => res.render("admin/ops", withCommon(req)));
+
+// ── 表现分析(教师端): 横向(按科目对比学生) / 纵向(按学生对比学科) / 学生间对比 ──
+// 注意: 三种视图都包含已毕业学生(带 graduated 标记), 便于历史学期横向对比
+router.get("/performance", (req, res) => {
+  const year = req.query.year || store.getActiveYear();
+  res.render("admin/performance", Object.assign(withCommon(req), { year }));
+});
+// 横向: 某学年某科目的全体学生表现
+router.get("/api/performance/horizontal", (req, res) => {
+  const year = req.query.year || store.getActiveYear();
+  const subject = req.query.subject || "";
+  const formulas = store.getModel().courseFormulas;
+  const students = store.getStudents();
+  // 该学年实际有数据的科目集合(供前端下拉)
+  const subjSet = new Set(Object.keys(formulas));
+  for (const name in students) {
+    const subs = students[name];
+    for (const sj in subs) {
+      if (sj === "cls") continue;
+      if (subs[sj][year]) subjSet.add(sj);
+    }
+  }
+  const subjects = Array.from(subjSet).sort();
+  if (!subject) return res.json({ ok: true, year, subject: "", subjects, rows: [], classAvg: null, abilities: model.ABILITIES });
+  const rows = [];
+  for (const name in students) {
+    const subs = students[name];
+    const entry = subs[subject] && subs[subject][year];
+    if (!entry || !entry.s || entry.s.length !== 6) continue;
+    const meta = store.getStudentMeta(name);
+    const fmt = formulas[subject];
+    const avg = +(entry.s.reduce((a, b) => a + b, 0) / 6).toFixed(2);
+    rows.push({
+      name, grade: meta.grade, graduated: meta.graduated,
+      scores: entry.s.slice(0, 6), avg,
+      prediction: fmt ? model.predictAP(entry.s, fmt).final : null,
+      actual: entry.a != null ? entry.a : null
+    });
+  }
+  rows.sort((a, b) => (b.prediction || 0) - (a.prediction || 0));
+  rows.forEach((r, i) => { r.rank = i + 1; });
+  const withPred = rows.filter(r => r.prediction != null);
+  const classAvg = withPred.length ? +(withPred.reduce((s, r) => s + r.prediction, 0) / withPred.length).toFixed(2) : null;
+  res.json({ ok: true, year, subject, subjects, rows, classAvg, abilities: model.ABILITIES });
+});
+// 纵向: 某学生某学年的全科表现
+router.get("/api/performance/vertical", (req, res) => {
+  const year = req.query.year || store.getActiveYear();
+  const name = req.query.name || "";
+  const formulas = store.getModel().courseFormulas;
+  const subs = (store.getStudents()[name]) || {};
+  const rows = [];
+  for (const sj in subs) {
+    if (sj === "cls") continue;
+    const entry = subs[sj][year];
+    if (!entry || !entry.s || entry.s.length !== 6) continue;
+    const fmt = formulas[sj];
+    const avg = +(entry.s.reduce((a, b) => a + b, 0) / 6).toFixed(2);
+    const pred = fmt ? model.predictAP(entry.s, fmt).final : null;
+    rows.push({
+      subject: sj, scores: entry.s.slice(0, 6), avg,
+      prediction: pred, actual: entry.a != null ? entry.a : null,
+      err: (pred != null && entry.a != null) ? entry.a - pred : null
+    });
+  }
+  rows.sort((a, b) => a.subject.localeCompare(b.subject));
+  const withScores = rows.filter(r => r.scores);
+  const avg6 = model.ABILITIES.map((_, i) => {
+    const vals = withScores.map(r => r.scores[i]);
+    return vals.length ? +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2) : null;
+  });
+  res.json({ ok: true, year, name, rows, avg6, abilities: model.ABILITIES });
+});
+// 学生间对比: 多学生(含毕业)某学年横向对照
+router.get("/api/performance/compare", (req, res) => {
+  const year = req.query.year || store.getActiveYear();
+  const names = String(req.query.names || "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 6);
+  const formulas = store.getModel().courseFormulas;
+  const students = store.getStudents();
+  const subjects = new Set();
+  const out = names.map(name => {
+    const subs = students[name] || {};
+    const meta = store.getStudentMeta(name);
+    const sMap = {};
+    for (const sj in subs) {
+      if (sj === "cls") continue;
+      const entry = subs[sj][year];
+      if (!entry || !entry.s || entry.s.length !== 6) continue;
+      subjects.add(sj);
+      const fmt = formulas[sj];
+      sMap[sj] = {
+        scores: entry.s.slice(0, 6),
+        prediction: fmt ? model.predictAP(entry.s, fmt).final : null,
+        actual: entry.a != null ? entry.a : null
+      };
+    }
+    const preds = Object.values(sMap).map(v => v.prediction).filter(v => v != null);
+    return {
+      name, grade: meta ? meta.grade : null, graduated: meta ? meta.graduated : false,
+      subjects: sMap,
+      avg6: Object.values(sMap).length ? +(Object.values(sMap).reduce((s, v) => s + v.scores.reduce((a, b) => a + b, 0) / 6, 0) / Object.values(sMap).length).toFixed(2) : null,
+      avgPred: preds.length ? +(preds.reduce((a, b) => a + b, 0) / preds.length).toFixed(2) : null
+    };
+  });
+  res.json({ ok: true, year, students: out, subjects: Array.from(subjects).sort(), abilities: model.ABILITIES });
+});
+router.get("/ops", (req, res) => res.render("admin/ops", Object.assign(withCommon(req), { yearStats: store.getYearStats(), archivedYears: store.getArchivedYears() })));
 router.get("/infer", (req, res) => res.render("admin/infer", withCommon(req)));
 
 // 逆向能力推断辅助: 用学生某学年历史实际分反推能力向量, 并与老师手写均值对比
@@ -203,7 +309,7 @@ router.get("/api/student/:name", (req, res) => {
   const subs = store.getStudents()[req.params.name];
   if (!subs) return res.json({ ok: false, error: "无该学生" });
   const formulas = store.getModel().courseFormulas;
-  const rows = Object.keys(subs).filter(k => k !== "cls").map(sj => {
+  const rows = Object.keys(subs).filter(k => k !== "cls" && subs[k][year]).map(sj => {
     const e = subs[sj][year];
     const months = (e && e.months) ? Object.keys(e.months).sort() : [];
     return {
@@ -261,6 +367,22 @@ router.post("/api/years/active", (req, res) => {
   const r = store.setActiveYear(req.body.year);
   if (!r.ok) return res.json(r);
   res.json({ ok: true, activeYear: r.activeYear });
+});
+// 学年重置: 归档(可恢复)/恢复/彻底删除(不可恢复)
+router.post("/api/years/archive", (req, res) => {
+  const r = store.archiveYear(req.body.year);
+  if (!r.ok) return res.json(r);
+  res.json(Object.assign({ ok: true }, r, { stats: store.getYearStats(), archived: store.getArchivedYears() }));
+});
+router.post("/api/years/restore", (req, res) => {
+  const r = store.restoreYear(req.body.year);
+  if (!r.ok) return res.json(r);
+  res.json(Object.assign({ ok: true }, r, { stats: store.getYearStats(), archived: store.getArchivedYears() }));
+});
+router.post("/api/years/delete", (req, res) => {
+  const r = store.deleteYearData(req.body.year);
+  if (!r.ok) return res.json(r);
+  res.json(Object.assign({ ok: true }, r, { stats: store.getYearStats(), archived: store.getArchivedYears() }));
 });
 
 // 分析点 (供前端聚类/排名/洞察) —— 当前学年
