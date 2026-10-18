@@ -23,10 +23,27 @@ function ownData(name, year) {
         if (scores[i] > strongest.value) strongest = { index: i, value: scores[i] };
       }
     }
+    // 扣分因子分解: 低于合格线的维度按 (缺口 × 扣分率) 拉低预测分, 按贡献降序
+    let penaltyList = [], penaltyTotal = 0, noPenaltyPrediction = null, threshold = null;
+    if (scores.length === 6 && formulas[sj]) {
+      const fmt = formulas[sj];
+      const TH = fmt.threshold || 3.0, PR = fmt.penaltyRates || [];
+      const full = model.predictAP(scores, fmt);
+      threshold = TH;
+      penaltyTotal = full.penalty;
+      noPenaltyPrediction = Math.max(1, Math.min(5, Math.round(full.base + full.boost + full.offset)));
+      penaltyList = model.ABILITIES.map((a, i) => {
+        const shortfall = scores[i] < TH ? +(TH - scores[i]).toFixed(2) : 0;
+        const rate = PR[i] || 0;
+        const contribution = shortfall * rate;
+        return { ability: a, score: scores[i], threshold: TH, shortfall, rate, contribution: +contribution.toFixed(3) };
+      }).filter(x => x.contribution > 0).sort((a, b) => b.contribution - a.contribution);
+    }
     return {
       subject: sj, scores, actual: entry && entry.a != null ? entry.a : null, prediction: pred,
       weakest: weakest ? { ability: model.ABILITIES[weakest.index], value: weakest.value } : null,
-      strongest: strongest ? { ability: model.ABILITIES[strongest.index], value: strongest.value } : null
+      strongest: strongest ? { ability: model.ABILITIES[strongest.index], value: strongest.value } : null,
+      penaltyList, penaltyTotal: +penaltyTotal.toFixed(3), noPenaltyPrediction, threshold
     };
   });
   const avg = model.ABILITIES.map((_, i) => {
