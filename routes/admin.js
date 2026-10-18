@@ -56,7 +56,7 @@ router.get("/students", (req, res) => {
   res.render("admin/students", Object.assign(withCommon(req), { rows, grades: store.GRADES }));
 });
 
-router.get("/scoring", (req, res) => res.render("admin/scoring", Object.assign(withCommon(req), { grades: store.GRADES })));
+router.get("/scoring", (req, res) => res.render("admin/scoring", Object.assign(withCommon(req), { grades: store.GRADES, currentMonth: store.currentMonth() })));
 router.get("/model", (req, res) => res.render("admin/model", withCommon(req)));
 router.get("/calibration", (req, res) => res.render("admin/calibration", withCommon(req)));
 router.get("/analytics", (req, res) => {
@@ -205,11 +205,13 @@ router.get("/api/student/:name", (req, res) => {
   const formulas = store.getModel().courseFormulas;
   const rows = Object.keys(subs).filter(k => k !== "cls").map(sj => {
     const e = subs[sj][year];
+    const months = (e && e.months) ? Object.keys(e.months).sort() : [];
     return {
       subject: sj,
       scores: e && e.s ? e.s : [],
       actual: e && e.a != null ? e.a : null,
-      prediction: (e && e.s) ? model.predictAP(e.s, formulas[sj]).final : null
+      prediction: (e && e.s) ? model.predictAP(e.s, formulas[sj]).final : null,
+      months, latestMonth: months.length ? months[months.length - 1] : null
     };
   });
   res.json({ ok: true, data: { name: req.params.name, year, rows } });
@@ -220,11 +222,14 @@ router.post("/api/score", (req, res) => {
   if (!name || !subject || !Array.isArray(scores) || scores.length !== 6)
     return res.json({ ok: false, error: "参数不完整" });
   const year = req.body.year || store.getActiveYear();
-  store.setSubjectScore(name, subject, year, scores.map(Number), actual == null ? null : Number(actual));
+  // 评估月份(YYYY-MM, 缺省为当前月); 走月度序列保存, 旧快照自动归档
+  const month = (req.body.month && /^\d{4}-\d{2}$/.test(req.body.month)) ? req.body.month : store.currentMonth();
+  const r = store.saveAssessment(name, subject, year, month, scores.map(Number), actual == null ? null : Number(actual));
+  if (!r.ok) return res.json({ ok: false, error: r.error });
   // 录入后即时更新该生本学年推断(最新估算)
-  const r = computeInferred(name, year);
-  if (r && r.exists) store.setInferred(name, year, r.inferred);
-  res.json({ ok: true, year });
+  const inf = computeInferred(name, year);
+  if (inf && inf.exists) store.setInferred(name, year, inf.inferred);
+  res.json({ ok: true, year, month });
 });
 router.post("/api/score/delete", (req, res) => {
   const year = req.body.year || store.getActiveYear();

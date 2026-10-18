@@ -16,6 +16,12 @@
       </div>
       <div id="sliderBox"></div>
       <div class="form-row" style="margin-top:10px;"><label>实际 AP 分(可选, 用于校准)</label><input id="actual" type="number" min="1" max="5" step="1" placeholder="留空则未知"></div>
+      <div class="form-row"><label>评估月份</label>
+        <div class="form-inline" style="display:flex;gap:6px;align-items:center;">
+          <select id="monthSel" style="max-width:160px;"></select>
+          <span class="muted" style="font-size:12px;">每月评估一次, 保存后计入该月曲线</span>
+        </div>
+      </div>
       <div style="display:flex;gap:6px;">
         <button class="btn btn-sm btn-block" onclick="save()">保存评分</button>
         <button class="btn btn-sm btn-block btn-outline" onclick="resetSliders()">重置</button>
@@ -23,7 +29,7 @@
     </div>
     <div class="col card">
       <h2>该学生已有评分</h2>
-      <table class="data"><thead><tr><th>科目</th><th>预测</th><th>实际</th><th>操作</th></tr></thead><tbody id="existBody"></tbody></table>
+      <table class="data"><thead><tr><th>科目</th><th>预测</th><th>实际</th><th>评估次数</th><th>操作</th></tr></thead><tbody id="existBody"></tbody></table>
     </div>
   </div>
 </div>
@@ -34,7 +40,30 @@ const levelNames = <%- JSON.stringify(levelNames) %>;
 const courseNames = <%- JSON.stringify(courseNames) %>;
 const YEARS = <%- JSON.stringify(years) %>;
 const ACTIVE_YEAR = <%- JSON.stringify(activeYear) %>;
+const CURRENT_MONTH = <%- JSON.stringify(currentMonth) %>;
 let current = { scores: [3,3,3,3,3,3] };
+
+// 评估月份下拉: 当前月及此前 11 个月 + 该生已有月份(动态合并)
+function shiftMonth(ym, delta) {
+  const p = ym.split('-').map(Number);
+  const d = new Date(Date.UTC(p[0], p[1] - 1 + delta, 1));
+  return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+}
+function buildMonthSel(extraMonths) {
+  const sel = document.getElementById('monthSel');
+  const set = new Set();
+  for (let i = 11; i >= 0; i--) set.add(shiftMonth(CURRENT_MONTH, -i));
+  (extraMonths || []).forEach(m => set.add(m));
+  const arr = Array.from(set).sort();
+  sel.innerHTML = '';
+  arr.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m; o.textContent = m + (m === CURRENT_MONTH ? '（本月）' : '');
+    sel.appendChild(o);
+  });
+  if (arr.includes(CURRENT_MONTH)) sel.value = CURRENT_MONTH;
+  return arr;
+}
 
 function buildYearSel(){
   const sel=document.getElementById('yearSel');
@@ -71,11 +100,15 @@ async function loadExisting(){
   const r=await (await fetch('/admin/api/student/'+encodeURIComponent(name)+'?year='+encodeURIComponent(curYear()))).json();
   const tb=document.getElementById('existBody'); tb.innerHTML='';
   if(!r.ok){return;}
+  const allMonths=[];
   r.data.rows.forEach(row=>{
+    (row.months||[]).forEach(m=>{ if(!allMonths.includes(m)) allMonths.push(m); });
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${row.subject}</td><td><span class="badge ps-${row.prediction}">${row.prediction}</span></td><td>${row.actual!=null?row.actual:'-'}</td><td><button class="btn btn-sm btn-outline" onclick="loadOne('${encodeURIComponent(row.subject)}')">编辑能力值</button> <button class="btn btn-sm btn-danger" onclick="delSub('${encodeURIComponent(row.subject)}')">删</button></td>`;
+    const cnt=row.months&&row.months.length?row.months.length+' 次（'+(row.latestMonth||'')+'）':'-';
+    tr.innerHTML=`<td>${row.subject}</td><td><span class="badge ps-${row.prediction}">${row.prediction}</span></td><td>${row.actual!=null?row.actual:'-'}</td><td>${cnt}</td><td><button class="btn btn-sm btn-outline" onclick="loadOne('${encodeURIComponent(row.subject)}')">编辑能力值</button> <button class="btn btn-sm btn-danger" onclick="delSub('${encodeURIComponent(row.subject)}')">删</button></td>`;
     tb.appendChild(tr);
   });
+  buildMonthSel(allMonths);
 }
 async function loadOne(subj){
   subj=decodeURIComponent(subj);
@@ -95,15 +128,16 @@ async function save(){
   if(subj==='__custom__') subj=document.getElementById('subjCustom').value.trim();
   if(!name||!subj) return alert('请先选择学生和科目');
   const actual=document.getElementById('actual').value;
-  const r=await (await fetch('/admin/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,subject:subj,scores:current.scores,actual:actual?+actual:null,year:curYear()})})).json();
-  if(r.ok){document.getElementById('msg').innerHTML='<div class="alert alert-ok">已保存 · 已更新 '+curYear()+' 学年估算</div>';loadExisting();} else alert(r.error);
+  const month=document.getElementById('monthSel').value||CURRENT_MONTH;
+  const r=await (await fetch('/admin/api/score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,subject:subj,scores:current.scores,actual:actual?+actual:null,year:curYear(),month})})).json();
+  if(r.ok){document.getElementById('msg').innerHTML='<div class="alert alert-ok">已保存为 '+r.month+' 评估 · 已更新 '+curYear()+' 学年估算</div>';loadExisting();} else alert(r.error);
 }
 async function delSub(subj){
   subj=decodeURIComponent(subj); const name=document.getElementById('stuSel').value;
   if(confirm('删除 '+subj+' ('+curYear()+')?')) fetch('/admin/api/score/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,subject:subj,year:curYear()})}).then(loadExisting);
 }
 document.getElementById('subjSel').onchange=function(){document.getElementById('subjCustom').style.display=this.value==='__custom__'?'block':'none';};
-buildSliders(); buildYearSel();
+buildSliders(); buildYearSel(); buildMonthSel();
 // 从 URL 预选(如从成绩报告页跳转): ?name=&subject=&year=
 (function(){
   const q=new URLSearchParams(location.search);

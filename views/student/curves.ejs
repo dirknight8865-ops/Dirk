@@ -1,0 +1,111 @@
+<%- include('../partials/head', {title:'评估曲线 · 学生端'}) %>
+<%- include('../partials/nav-student', {user: user, active: 'curves'}) %>
+<div class="app">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+    <h1 style="font-size:22px;font-weight:700;margin:0;">评估曲线</h1>
+    <span style="background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600;">学年 <%= year %></span>
+  </div>
+
+  <%- include('../partials/year-picker', {years, year, activeYear, base: '/student/curves', hint: '切换学年可查看该学年的月度评估曲线'}) %>
+
+  <% if(subjects.length===0){ %>
+    <div class="card"><p class="muted">暂无评分数据, 请联系老师录入。</p></div>
+  <% } else { %>
+
+  <!-- 科目选择 -->
+  <div class="card" style="margin-bottom:16px;padding:14px 20px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <label style="margin:0;font-weight:600;">科目：</label>
+      <select id="subjSel" style="width:auto;min-width:240px;">
+        <% subjects.forEach(sj=>{ %>
+          <option value="<%= sj %>" <%= sj===subject?'selected':'' %>><%= sj %></option>
+        <% }) %>
+      </select>
+      <span class="muted">共 <%= allMonths.length %> 个月有评估记录<% if(!hasMonthly){ %>（该科暂仅 1 次）<% } %></span>
+    </div>
+  </div>
+
+  <% if(series.length===0){ %>
+    <div class="card"><p class="muted">该科目暂无评分数据。</p></div>
+  <% } else { %>
+
+  <% if(!hasMonthly){ %>
+    <div class="card" style="background:#fffbeb;border:1px solid #fde68a;">
+      <p style="margin:0;">目前只有 <b>1 次</b>评估记录，还无法形成趋势曲线。从本月开始，老师每月录入一次评估后，这里就会自动长出你的成长曲线。</p>
+    </div>
+  <% } %>
+
+  <!-- ① 六维各自折线 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2>① 六维能力趋势（每次评估）</h2>
+    <p class="muted" style="font-size:13px;margin:0 0 12px;">每条折线是一项能力在历次评估中的评分变化（1-5 分）。</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+      <% abilities.forEach((a, i)=>{ %>
+        <div>
+          <h3 style="margin:0 0 6px;font-size:14px;"><%= a %></h3>
+          <div style="height:180px;"><canvas id="cv-<%= i %>"></canvas></div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- ② 平均分折线 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2>② 六维平均分趋势</h2>
+    <p class="muted" style="font-size:13px;margin:0 0 12px;">六项能力的平均分，反映整体水平的变化。</p>
+    <div style="height:260px;"><canvas id="cvAvg"></canvas></div>
+  </div>
+
+  <!-- ③ 预估分折线 -->
+  <div class="card" style="margin-bottom:16px;">
+    <h2>③ AP 预估分趋势</h2>
+    <p class="muted" style="font-size:13px;margin:0 0 12px;">每次评估后模型预测的 AP 分数<% if(series.some(p=>p.actual!=null)){ %>；散点为该科已出的实际 AP 分<% } %>。</p>
+    <div style="height:260px;"><canvas id="cvPred"></canvas></div>
+  </div>
+
+  <% } %>
+  <% } %>
+</div>
+
+<script>
+const ABILITIES = <%- JSON.stringify(abilities) %>;
+const SERIES = <%- JSON.stringify(series) %>;
+const AVG_SERIES = <%- JSON.stringify(avgSeries) %>;
+const LABELS = SERIES.map(p => p.month ? (p.month.split('-')[1].replace(/^0/, '') + '月') : '当前');
+const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'];
+
+document.getElementById('subjSel').onchange = function () {
+  location.href = '/student/curves?year=<%= year %>&subject=' + encodeURIComponent(this.value);
+};
+
+function lineChart(canvasId, label, data, color, extraDataset) {
+  const ds = [{
+    label: label, data: data, borderColor: color, backgroundColor: color + '2e',
+    fill: true, tension: 0.3, pointRadius: 4, spanGaps: true
+  }];
+  if (extraDataset) ds.push(extraDataset);
+  new Chart(document.getElementById(canvasId).getContext('2d'), {
+    type: 'line',
+    data: { labels: LABELS, datasets: ds },
+    options: {
+      scales: { y: { min: 1, max: 5, ticks: { stepSize: 1 } } },
+      plugins: { legend: { display: !!extraDataset } }
+    }
+  });
+}
+
+// ① 六维各自折线
+ABILITIES.forEach((a, i) => {
+  lineChart('cv-' + i, a, SERIES.map(p => p.scores[i] != null ? p.scores[i] : null), COLORS[i % COLORS.length]);
+});
+// ② 平均分
+lineChart('cvAvg', '六维平均分', AVG_SERIES.map(p => p.avg), '#3b82f6');
+// ③ 预估分 + 实际分散点
+const actualPts = SERIES.map(p => p.actual != null ? p.actual : null);
+lineChart('cvPred', '预估分', SERIES.map(p => p.prediction), '#f59e0b',
+  actualPts.some(v => v != null) ? {
+    label: '实际分', data: actualPts, showLine: false,
+    pointRadius: 6, pointBackgroundColor: '#10b981', borderColor: '#10b981'
+  } : null);
+</script>
+</body></html>

@@ -195,6 +195,44 @@ router.get("/plan", (req, res) => {
   });
 });
 
+// ============================================================
+// 评估曲线(学生端): 月度能力评估趋势
+// 六维各自折线 + 六维平均分折线 + 该科预估分折线
+// ============================================================
+router.get("/curves", (req, res) => {
+  const name = req.session.user.studentName;
+  const abilities = store.getModel().abilities;
+  const formulas = store.getModel().courseFormulas;
+  const { availYears, year } = resolveStudentYear(req, name);
+  const subs = store.getStudents()[name] || {};
+  const subjects = Object.keys(subs).filter(k => k !== "cls" && subs[k][year]).sort();
+  // 默认选第一个科目(与 ability 页一致的交互)
+  const subject = (req.query.subject && subjects.includes(req.query.subject)) ? req.query.subject : subjects[0];
+  // 该科月度序列 + 每月预测分(用当月 scores 跑 predictAP)
+  let series = [];
+  if (subject) {
+    series = store.getAssessmentSeries(name, subject, year).map(p => {
+      const fmt = formulas[subject];
+      const pred = (p.s.length === 6 && fmt) ? model.predictAP(p.s, fmt).final : null;
+      return { month: p.month, scores: p.s, actual: p.a, prediction: pred };
+    });
+  }
+  // 平均分序列
+  const avgSeries = series.map(p => {
+    const vals = p.scores.filter(v => typeof v === "number");
+    return { month: p.month, avg: vals.length === 6 ? +(vals.reduce((a, b) => a + b, 0) / 6).toFixed(2) : null };
+  });
+  // 该生该学年全部评估月份(用于提示)
+  const allMonths = store.getAssessmentMonths(name, year);
+  res.render("student/curves", {
+    user: req.session.user, abilities, formulas,
+    subjects, subject, series, avgSeries,
+    years: availYears, year, activeYear: store.getActiveYear(),
+    hasMonthly: series.some(p => p.month != null),
+    allMonths, active: "curves"
+  });
+});
+
 router.get("/profile", (req, res) => {
   const name = req.session.user.studentName;
   const { availYears, year } = resolveStudentYear(req, name);
