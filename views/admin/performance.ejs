@@ -38,9 +38,13 @@
   <!-- ② 纵向视图 -->
   <div id="view-vertical" style="display:none;">
     <div class="form-row" style="max-width:360px;"><label>学生</label><select id="vStuSel"></select></div>
+    <div class="card" style="margin-bottom:16px;">
+      <h2 style="margin-bottom:8px;">选择要对比的学科（可多选，各学科六维图叠加显示）</h2>
+      <div id="vSubjList" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
     <div class="row">
       <div class="col card">
-        <h2>六维能力画像（全科平均）</h2>
+        <h2>各学科六维能力叠加对比</h2>
         <div class="chart-box"><canvas id="vRadar"></canvas></div>
       </div>
       <div class="col card">
@@ -123,30 +127,80 @@ async function loadHorizontal(){
 }
 
 // ── 纵向 ──
+let lastVRows = [];
 async function loadVertical(){
   const name = document.getElementById('vStuSel').value;
   if (!name) return;
   const r = await (await fetch('/admin/api/performance/vertical?year=' + encodeURIComponent(curYear()) + '&name=' + encodeURIComponent(name))).json();
-  if (vRadar) vRadar.destroy();
-  vRadar = new Chart(document.getElementById('vRadar').getContext('2d'), {
-    type: 'radar',
-    data: { labels: ABILITIES, datasets: [{ label: name, data: r.avg6, fill: true, backgroundColor: 'rgba(59,130,246,0.18)', borderColor: '#3b82f6', pointBackgroundColor: '#3b82f6' }] },
-    options: { scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
-  });
+  lastVRows = r.rows;
+  renderVSubjPicker(r.rows);
+  renderVRadar(r.rows);
   const tb = document.getElementById('vBody'); tb.innerHTML = '';
   r.rows.forEach(row => {
     const tr = document.createElement('tr');
+    tr.dataset.subject = row.subject;
     const errBadge = row.err == null ? '-' : (row.err >= 0 ? `<span class="badge good">+${row.err}</span>` : `<span class="badge" style="background:#ef4444;color:#fff;">${row.err}</span>`);
     tr.innerHTML = `<td>${row.subject}</td><td>${row.avg}</td><td><span class="badge ps-${row.prediction}">${row.prediction}</span></td><td>${row.actual != null ? row.actual : '-'}</td><td>${errBadge}</td>`;
     tb.appendChild(tr);
   });
+  highlightVRows();
   // 六维矩阵
   document.getElementById('vMatrixHead').innerHTML = '<th>科目</th>' + ABILITIES.map(a => `<th>${a.slice(0, 2)}</th>`).join('');
   const mb = document.getElementById('vMatrixBody'); mb.innerHTML = '';
   r.rows.forEach(row => {
     const tr = document.createElement('tr');
+    tr.dataset.subject = row.subject;
     tr.innerHTML = `<td>${row.subject}</td>` + row.scores.map(v => `<td>${v}</td>`).join('');
     mb.appendChild(tr);
+  });
+  highlightVRows();
+}
+// 学科多选(默认全选, 最多 6 科, 至少 1 科)
+function renderVSubjPicker(rows){
+  const box = document.getElementById('vSubjList');
+  box.innerHTML = '';
+  rows.forEach(row => {
+    const label = document.createElement('label');
+    label.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:13px;background:#fff;';
+    label.dataset.subject = row.subject;
+    label.innerHTML = `<input type="checkbox" checked value="${row.subject}"> ${row.subject}`;
+    box.appendChild(label);
+  });
+  box.querySelectorAll('input').forEach(cb => cb.onchange = () => {
+    const checked = [...box.querySelectorAll('input:checked')];
+    if (checked.length > 6) { cb.checked = false; alert('最多同时对比 6 个学科'); return; }
+    if (checked.length === 0) { cb.checked = true; alert('至少保留一个学科'); return; }
+    renderVRadar(lastVRows);
+    highlightVRows();
+  });
+}
+function pickedVSubjects(){
+  return [...document.querySelectorAll('#vSubjList input:checked')].map(x => x.value);
+}
+// 叠加雷达: 每个选中学科一条六维线
+function renderVRadar(rows){
+  const picked = pickedVSubjects();
+  const datasets = rows.filter(r => picked.includes(r.subject)).map((r, i) => ({
+    label: r.subject, data: r.scores,
+    borderColor: COLORS[i % COLORS.length], backgroundColor: COLORS[i % COLORS.length] + '2e',
+    pointBackgroundColor: COLORS[i % COLORS.length], fill: true
+  }));
+  if (vRadar) vRadar.destroy();
+  vRadar = new Chart(document.getElementById('vRadar').getContext('2d'), {
+    type: 'radar',
+    data: { labels: ABILITIES, datasets },
+    options: { scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'bottom' } } }
+  });
+}
+// 表格行随多选高亮联动
+function highlightVRows(){
+  const picked = new Set(pickedVSubjects());
+  document.querySelectorAll('#vBody tr, #vMatrixBody tr').forEach(tr => {
+    tr.style.background = (tr.dataset.subject && picked.has(tr.dataset.subject)) ? '#eff6ff' : '';
+  });
+  document.querySelectorAll('#vSubjList label').forEach(lb => {
+    lb.style.borderColor = picked.has(lb.dataset.subject) ? 'var(--accent)' : 'var(--border)';
+    lb.style.background = picked.has(lb.dataset.subject) ? '#eff6ff' : '#fff';
   });
 }
 
